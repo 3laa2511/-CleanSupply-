@@ -19,8 +19,7 @@ export class HttpExceptionFilter implements ExceptionFilter {
       id?: string;
     }>();
     const response = http.getResponse<{
-      status(code: number): this;
-      json(body: unknown): void;
+      status(code: number): { json(body: unknown): void };
     }>();
 
     const status =
