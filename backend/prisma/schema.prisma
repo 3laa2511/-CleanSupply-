@@ -1,0 +1,350 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserStatus {
+  ACTIVE
+  SUSPENDED
+  DELETED
+}
+
+enum CustomerSegment {
+  RETAIL
+  WHOLESALE
+  BUSINESS
+}
+
+enum VerificationStatus {
+  NOT_REQUIRED
+  PENDING
+  VERIFIED
+  REJECTED
+}
+
+enum CustomerTier {
+  STANDARD
+  TIER_A
+  TIER_B
+  ENTERPRISE
+}
+
+enum OrderStatus {
+  PLACED
+  CONFIRMED
+  PROCESSING
+  READY_FOR_DISPATCH
+  OUT_FOR_DELIVERY
+  DELIVERED
+  CANCELLED
+}
+
+enum PaymentMethod {
+  COD
+  CARD
+  MOBILE_WALLET
+  CREDIT_INVOICE
+  MANUAL_TRANSFER
+}
+
+enum PaymentStatus {
+  PENDING
+  PENDING_VERIFICATION
+  PAID
+  FAILED
+  PARTIALLY_REFUNDED
+  REFUNDED
+}
+
+enum InventoryMovementType {
+  RECEIPT
+  RESERVATION
+  RESERVATION_RELEASE
+  SALE
+  ADJUSTMENT
+  RETURN
+}
+
+model User {
+  id           String     @id @default(uuid()) @db.Uuid
+  firebaseUid  String     @unique @map("firebase_uid")
+  email        String?    @unique
+  phone        String?    @unique
+  displayName  String?    @map("display_name")
+  status       UserStatus @default(ACTIVE)
+  createdAt    DateTime   @default(now()) @map("created_at")
+  updatedAt    DateTime   @updatedAt @map("updated_at")
+  roles        UserRole[]
+  profile      CustomerProfile?
+  addresses    Address[]
+  orders       Order[]
+  auditEvents  AuditLog[] @relation("AuditActor")
+  inventoryMovements InventoryLedger[] @relation("InventoryActor")
+
+  @@map("users")
+}
+
+model Role {
+  id          String           @id @default(uuid()) @db.Uuid
+  code        String           @unique
+  name        String
+  description String?
+  createdAt   DateTime         @default(now()) @map("created_at")
+  users       UserRole[]
+  permissions RolePermission[]
+
+  @@map("roles")
+}
+
+model Permission {
+  id          String           @id @default(uuid()) @db.Uuid
+  code        String           @unique
+  description String?
+  roles       RolePermission[]
+
+  @@map("permissions")
+}
+
+model UserRole {
+  userId    String   @db.Uuid @map("user_id")
+  roleId    String   @db.Uuid @map("role_id")
+  assignedAt DateTime @default(now()) @map("assigned_at")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role      Role     @relation(fields: [roleId], references: [id], onDelete: Restrict)
+
+  @@id([userId, roleId])
+  @@map("user_roles")
+}
+
+model RolePermission {
+  roleId       String     @db.Uuid @map("role_id")
+  permissionId String     @db.Uuid @map("permission_id")
+  role         Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@id([roleId, permissionId])
+  @@map("role_permissions")
+}
+
+model CustomerProfile {
+  id                 String             @id @default(uuid()) @db.Uuid
+  userId             String             @unique @db.Uuid @map("user_id")
+  segment            CustomerSegment    @default(RETAIL)
+  verificationStatus VerificationStatus @default(NOT_REQUIRED) @map("verification_status")
+  approvedTier       CustomerTier       @default(STANDARD) @map("approved_tier")
+  creditLimit        Decimal            @default(0) @db.Decimal(14, 2) @map("credit_limit")
+  creditUsed         Decimal            @default(0) @db.Decimal(14, 2) @map("credit_used")
+  loyaltyPoints      Int                @default(0) @map("loyalty_points")
+  taxRegistrationNo  String?            @map("tax_registration_no")
+  createdAt          DateTime           @default(now()) @map("created_at")
+  updatedAt          DateTime           @updatedAt @map("updated_at")
+  user               User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("customer_profiles")
+}
+
+model Address {
+  id             String   @id @default(uuid()) @db.Uuid
+  userId         String   @db.Uuid @map("user_id")
+  label          String?
+  recipientName  String   @map("recipient_name")
+  phone          String
+  countryCode    String   @default("EG") @map("country_code")
+  city           String
+  area           String?
+  street         String
+  building       String?
+  floor          String?
+  latitude       Decimal? @db.Decimal(10, 7)
+  longitude      Decimal? @db.Decimal(10, 7)
+  isDefault      Boolean  @default(false) @map("is_default")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  orders         Order[]
+
+  @@index([userId, isDefault])
+  @@map("addresses")
+}
+
+model Warehouse {
+  id          String             @id @default(uuid()) @db.Uuid
+  code        String             @unique
+  name        String
+  isActive    Boolean            @default(true) @map("is_active")
+  createdAt   DateTime           @default(now()) @map("created_at")
+  updatedAt   DateTime           @updatedAt @map("updated_at")
+  balances    InventoryBalance[]
+  movements   InventoryLedger[]
+
+  @@map("warehouses")
+}
+
+model Category {
+  id          String     @id @default(uuid()) @db.Uuid
+  parentId    String?    @db.Uuid @map("parent_id")
+  slug        String     @unique
+  nameAr      String     @map("name_ar")
+  nameEn      String     @map("name_en")
+  sortOrder   Int        @default(0) @map("sort_order")
+  isActive    Boolean    @default(true) @map("is_active")
+  parent      Category?  @relation("CategoryTree", fields: [parentId], references: [id], onDelete: SetNull)
+  children    Category[] @relation("CategoryTree")
+  products    Product[]
+
+  @@index([parentId, sortOrder])
+  @@map("categories")
+}
+
+model Product {
+  id             String             @id @default(uuid()) @db.Uuid
+  categoryId     String?            @db.Uuid @map("category_id")
+  sku            String             @unique
+  slug           String             @unique
+  nameAr         String             @map("name_ar")
+  nameEn         String             @map("name_en")
+  descriptionAr  String?            @map("description_ar")
+  descriptionEn  String?            @map("description_en")
+  baseUnit       String             @map("base_unit")
+  unitsPerCarton Int?               @map("units_per_carton")
+  minOrderQty    Int                @default(1) @map("min_order_qty")
+  isActive       Boolean            @default(true) @map("is_active")
+  createdAt      DateTime           @default(now()) @map("created_at")
+  updatedAt      DateTime           @updatedAt @map("updated_at")
+  category       Category?          @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  prices         ProductPrice[]
+  balances       InventoryBalance[]
+  movements      InventoryLedger[]
+  orderItems     OrderItem[]
+
+  @@index([categoryId, isActive])
+  @@map("products")
+}
+
+model ProductPrice {
+  id         String          @id @default(uuid()) @db.Uuid
+  productId  String          @db.Uuid @map("product_id")
+  segment    CustomerSegment
+  tier       CustomerTier    @default(STANDARD)
+  unitPrice  Decimal         @db.Decimal(14, 2) @map("unit_price")
+  currency   String          @default("EGP")
+  validFrom  DateTime        @default(now()) @map("valid_from")
+  validUntil DateTime?       @map("valid_until")
+  product    Product         @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([productId, segment, tier, validFrom])
+  @@map("product_prices")
+}
+
+model InventoryBalance {
+  id               String    @id @default(uuid()) @db.Uuid
+  warehouseId      String    @db.Uuid @map("warehouse_id")
+  productId        String    @db.Uuid @map("product_id")
+  quantity         Int       @default(0)
+  reservedQuantity Int       @default(0) @map("reserved_quantity")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
+  warehouse        Warehouse @relation(fields: [warehouseId], references: [id], onDelete: Restrict)
+  product          Product   @relation(fields: [productId], references: [id], onDelete: Restrict)
+
+  @@unique([warehouseId, productId])
+  @@map("inventory_balances")
+}
+
+model InventoryLedger {
+  id          String                @id @default(uuid()) @db.Uuid
+  warehouseId String                @db.Uuid @map("warehouse_id")
+  productId   String                @db.Uuid @map("product_id")
+  actorUserId String?               @db.Uuid @map("actor_user_id")
+  movement    InventoryMovementType
+  quantity    Int
+  reference   String?
+  note        String?
+  createdAt   DateTime              @default(now()) @map("created_at")
+  warehouse   Warehouse             @relation(fields: [warehouseId], references: [id], onDelete: Restrict)
+  product     Product               @relation(fields: [productId], references: [id], onDelete: Restrict)
+  actor       User?                 @relation("InventoryActor", fields: [actorUserId], references: [id], onDelete: SetNull)
+
+  @@index([warehouseId, productId, createdAt])
+  @@map("inventory_ledger")
+}
+
+model Order {
+  id             String        @id @default(uuid()) @db.Uuid
+  orderNumber    String        @unique @map("order_number")
+  userId         String        @db.Uuid @map("user_id")
+  addressId      String?       @db.Uuid @map("address_id")
+  status         OrderStatus   @default(PLACED)
+  currency       String        @default("EGP")
+  subtotal       Decimal       @db.Decimal(14, 2)
+  discountTotal  Decimal       @default(0) @db.Decimal(14, 2) @map("discount_total")
+  taxTotal       Decimal       @default(0) @db.Decimal(14, 2) @map("tax_total")
+  shippingFee    Decimal       @default(0) @db.Decimal(14, 2) @map("shipping_fee")
+  grandTotal     Decimal       @db.Decimal(14, 2) @map("grand_total")
+  notes          String?
+  createdAt      DateTime      @default(now()) @map("created_at")
+  updatedAt      DateTime      @updatedAt @map("updated_at")
+  user           User          @relation(fields: [userId], references: [id], onDelete: Restrict)
+  address        Address?      @relation(fields: [addressId], references: [id], onDelete: SetNull)
+  items          OrderItem[]
+  payments       Payment[]
+
+  @@index([userId, createdAt])
+  @@index([status, createdAt])
+  @@map("orders")
+}
+
+model OrderItem {
+  id          String   @id @default(uuid()) @db.Uuid
+  orderId     String   @db.Uuid @map("order_id")
+  productId   String   @db.Uuid @map("product_id")
+  productSku  String   @map("product_sku")
+  productName String   @map("product_name")
+  quantity    Int
+  unitPrice   Decimal  @db.Decimal(14, 2) @map("unit_price")
+  lineTotal   Decimal  @db.Decimal(14, 2) @map("line_total")
+  order       Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product     Product  @relation(fields: [productId], references: [id], onDelete: Restrict)
+
+  @@index([orderId])
+  @@map("order_items")
+}
+
+model Payment {
+  id                String        @id @default(uuid()) @db.Uuid
+  orderId           String        @db.Uuid @map("order_id")
+  method            PaymentMethod
+  status            PaymentStatus @default(PENDING)
+  amount            Decimal       @db.Decimal(14, 2)
+  currency          String        @default("EGP")
+  provider          String?
+  providerReference String?       @map("provider_reference")
+  idempotencyKey    String?       @unique @map("idempotency_key")
+  verifiedAt        DateTime?     @map("verified_at")
+  createdAt         DateTime      @default(now()) @map("created_at")
+  updatedAt         DateTime      @updatedAt @map("updated_at")
+  order             Order         @relation(fields: [orderId], references: [id], onDelete: Restrict)
+
+  @@index([orderId, status])
+  @@index([provider, providerReference])
+  @@map("payments")
+}
+
+model AuditLog {
+  id          String   @id @default(uuid()) @db.Uuid
+  actorUserId String?  @db.Uuid @map("actor_user_id")
+  action      String
+  entityType  String   @map("entity_type")
+  entityId    String?  @map("entity_id")
+  requestId   String?  @map("request_id")
+  metadata    Json?
+  createdAt   DateTime @default(now()) @map("created_at")
+  actor       User?    @relation("AuditActor", fields: [actorUserId], references: [id], onDelete: SetNull)
+
+  @@index([entityType, entityId, createdAt])
+  @@index([actorUserId, createdAt])
+  @@map("audit_logs")
+}

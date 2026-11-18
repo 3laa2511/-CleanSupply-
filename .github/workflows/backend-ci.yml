@@ -1,0 +1,39 @@
+name: CleanSupply Backend CI
+
+on:
+  push:
+    branches: [main, "feat/**"]
+    paths:
+      - "backend/**"
+      - ".github/workflows/backend-ci.yml"
+  pull_request:
+    paths:
+      - "backend/**"
+      - ".github/workflows/backend-ci.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  validate-and-build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    env:
+      DATABASE_URL: postgresql://ci:ci@localhost:5432/cleansupply?schema=public
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Install dependencies
+        run: npm install
+      - name: Validate Prisma schema
+        run: npm run prisma:validate
+      - name: Generate Prisma Client
+        run: npm run prisma:generate
+      - name: Build API
+        run: npm run build
+      - name: Run unit tests
+        run: npm test -- --runInBand
