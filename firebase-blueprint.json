@@ -1,0 +1,311 @@
+{
+  "entities": {
+    "Category": {
+      "title": "Category",
+      "description": "Cleaning and hygiene product category.",
+      "type": "object",
+      "properties": {
+        "nameAr": { "type": "string" },
+        "nameEn": { "type": "string" },
+        "iconKey": { "type": "string" },
+        "sortOrder": { "type": "integer" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Client writes FieldValue.serverTimestamp()" },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Client writes FieldValue.serverTimestamp()" }
+      },
+      "required": ["nameAr", "nameEn", "iconKey", "sortOrder", "createdAt", "updatedAt"]
+    },
+    "Product": {
+      "title": "Product",
+      "description": "Cleaning supply SKU with multi-tier pricing, carton pack specs, MOQ, and stock.",
+      "type": "object",
+      "properties": {
+        "sku": { "type": "string" },
+        "nameAr": { "type": "string" },
+        "nameEn": { "type": "string" },
+        "descriptionAr": { "type": "string" },
+        "descriptionEn": { "type": "string" },
+        "categoryId": { "type": "string" },
+        "brand": { "type": "string" },
+        "unitLabelAr": { "type": "string" },
+        "unitLabelEn": { "type": "string" },
+        "cartonSize": { "type": "integer" },
+        "retailPrice": { "type": "number" },
+        "wholesalePrice": { "type": "number" },
+        "businessPrice": { "type": "number" },
+        "bulkMinQty": { "type": "integer" },
+        "bulkDiscountPercent": { "type": "integer" },
+        "moqRetail": { "type": "integer" },
+        "moqWholesale": { "type": "integer" },
+        "moqBusiness": { "type": "integer" },
+        "stockQty": { "type": "integer" },
+        "imageKey": { "type": "string" },
+        "featured": { "type": "boolean" },
+        "active": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Client writes FieldValue.serverTimestamp()" },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Client writes FieldValue.serverTimestamp()" }
+      },
+      "required": [
+        "sku", "nameAr", "nameEn", "descriptionAr", "descriptionEn",
+        "categoryId", "brand", "unitLabelAr", "unitLabelEn", "cartonSize",
+        "retailPrice", "wholesalePrice", "businessPrice", "bulkMinQty",
+        "bulkDiscountPercent", "moqRetail", "moqWholesale", "moqBusiness",
+        "stockQty", "imageKey", "featured", "active", "createdAt", "updatedAt"
+      ]
+    },
+    "DeliveryZone": {
+      "title": "DeliveryZone",
+      "description": "Geographic delivery zone with base shipping fee, threshold, and default carrier mode.",
+      "type": "object",
+      "properties": {
+        "nameAr": { "type": "string" },
+        "nameEn": { "type": "string" },
+        "baseFee": { "type": "number" },
+        "freeShippingThreshold": { "type": "number" },
+        "defaultFulfillmentType": { "type": "string", "enum": ["INTERNAL_FLEET", "THIRD_PARTY_CARRIER"] },
+        "estimatedHours": { "type": "integer" },
+        "carrierDefaultName": { "type": "string" },
+        "active": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": [
+        "nameAr", "nameEn", "baseFee", "freeShippingThreshold",
+        "defaultFulfillmentType", "estimatedHours", "carrierDefaultName",
+        "active", "createdAt", "updatedAt"
+      ]
+    },
+    "Coupon": {
+      "title": "Coupon",
+      "description": "Promotional coupon rule with segment eligibility and minimum order threshold.",
+      "type": "object",
+      "properties": {
+        "code": { "type": "string" },
+        "titleAr": { "type": "string" },
+        "titleEn": { "type": "string" },
+        "discountType": { "type": "string", "enum": ["PERCENT", "FIXED"] },
+        "discountValue": { "type": "number" },
+        "minOrderAmount": { "type": "number" },
+        "allowedSegments": { "type": "array" },
+        "active": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": [
+        "code", "titleAr", "titleEn", "discountType", "discountValue",
+        "minOrderAmount", "allowedSegments", "active", "createdAt", "updatedAt"
+      ]
+    },
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "Customer account profile supporting Retail, Wholesale, and Business/Institutional tiers.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "displayName": { "type": "string" },
+        "email": { "type": "string" },
+        "phone": { "type": "string" },
+        "companyName": { "type": "string" },
+        "taxId": { "type": "string" },
+        "segment": { "type": "string", "enum": ["RETAIL", "WHOLESALE", "BUSINESS"] },
+        "approvedTier": { "type": "string", "enum": ["STANDARD", "TIER_A", "TIER_B", "ENTERPRISE"] },
+        "verificationStatus": { "type": "string", "enum": ["VERIFIED", "PENDING_VERIFICATION", "REJECTED"] },
+        "loyaltyPoints": { "type": "integer" },
+        "creditLimit": { "type": "number" },
+        "creditUsed": { "type": "number" },
+        "preferredLocale": { "type": "string", "enum": ["ar", "en"] },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": [
+        "userId", "displayName", "email", "phone", "segment", "approvedTier",
+        "verificationStatus", "loyaltyPoints", "creditLimit", "creditUsed",
+        "preferredLocale", "createdAt", "updatedAt"
+      ]
+    },
+    "Address": {
+      "title": "Address",
+      "description": "Saved customer delivery address linked to a delivery zone.",
+      "type": "object",
+      "properties": {
+        "label": { "type": "string" },
+        "recipientName": { "type": "string" },
+        "phone": { "type": "string" },
+        "zoneId": { "type": "string" },
+        "streetDetails": { "type": "string" },
+        "buildingFloor": { "type": "string" },
+        "lat": { "type": "number" },
+        "lng": { "type": "number" },
+        "defaultAddress": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": [
+        "label", "recipientName", "phone", "zoneId", "streetDetails",
+        "buildingFloor", "lat", "lng", "defaultAddress", "createdAt", "updatedAt"
+      ]
+    },
+    "CartItem": {
+      "title": "CartItem",
+      "description": "Shopping cart item stored under user profile.",
+      "type": "object",
+      "properties": {
+        "productId": { "type": "string" },
+        "quantity": { "type": "integer" },
+        "packMode": { "type": "string", "enum": ["UNIT", "CARTON"] },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["productId", "quantity", "packMode", "createdAt", "updatedAt"]
+    },
+    "LoyaltyLog": {
+      "title": "LoyaltyLog",
+      "description": "Immutable loyalty points transaction ledger.",
+      "type": "object",
+      "properties": {
+        "titleAr": { "type": "string" },
+        "titleEn": { "type": "string" },
+        "pointsDelta": { "type": "integer" },
+        "orderId": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["titleAr", "titleEn", "pointsDelta", "orderId", "createdAt"]
+    },
+    "Order": {
+      "title": "Order",
+      "description": "Customer order supporting dual internal-fleet and third-party carrier fulfillment and multi-method payment.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "orderNumber": { "type": "string" },
+        "customerName": { "type": "string" },
+        "customerSegment": { "type": "string", "enum": ["RETAIL", "WHOLESALE", "BUSINESS"] },
+        "zoneId": { "type": "string" },
+        "zoneNameAr": { "type": "string" },
+        "zoneNameEn": { "type": "string" },
+        "deliveryAddress": { "type": "string" },
+        "deliverySlot": { "type": "string" },
+        "fulfillmentType": { "type": "string", "enum": ["INTERNAL_FLEET", "THIRD_PARTY_CARRIER"] },
+        "carrierName": { "type": "string" },
+        "trackingNumber": { "type": "string" },
+        "driverName": { "type": "string" },
+        "driverPhone": { "type": "string" },
+        "driverLat": { "type": "number" },
+        "driverLng": { "type": "number" },
+        "destLat": { "type": "number" },
+        "destLng": { "type": "number" },
+        "paymentMethod": { "type": "string", "enum": ["COD", "CREDIT_INVOICE", "CARD", "MOBILE_WALLET"] },
+        "paymentStatus": { "type": "string", "enum": ["PENDING", "PENDING_VERIFICATION", "PAID", "INVOICED"] },
+        "paymentReference": { "type": "string" },
+        "status": { "type": "string", "enum": ["PLACED", "CONFIRMED", "PACKED", "OUT_FOR_DELIVERY", "DELIVERED", "CANCELLED"] },
+        "subtotal": { "type": "number" },
+        "tierDiscount": { "type": "number" },
+        "couponCode": { "type": "string" },
+        "couponDiscount": { "type": "number" },
+        "loyaltyDiscount": { "type": "number" },
+        "loyaltyPointsUsed": { "type": "integer" },
+        "loyaltyPointsEarned": { "type": "integer" },
+        "shippingFee": { "type": "number" },
+        "totalAmount": { "type": "number" },
+        "itemCount": { "type": "integer" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": [
+        "userId", "orderNumber", "customerName", "customerSegment", "zoneId",
+        "zoneNameAr", "zoneNameEn", "deliveryAddress", "deliverySlot",
+        "fulfillmentType", "carrierName", "trackingNumber", "driverName",
+        "driverPhone", "driverLat", "driverLng", "destLat", "destLng",
+        "paymentMethod", "paymentStatus", "paymentReference", "status",
+        "subtotal", "tierDiscount", "couponCode", "couponDiscount",
+        "loyaltyDiscount", "loyaltyPointsUsed", "loyaltyPointsEarned",
+        "shippingFee", "totalAmount", "itemCount", "createdAt", "updatedAt"
+      ]
+    },
+    "OrderItem": {
+      "title": "OrderItem",
+      "description": "Line item belonging to an order.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "productId": { "type": "string" },
+        "nameAr": { "type": "string" },
+        "nameEn": { "type": "string" },
+        "packMode": { "type": "string", "enum": ["UNIT", "CARTON"] },
+        "unitPrice": { "type": "number" },
+        "quantity": { "type": "integer" },
+        "lineTotal": { "type": "number" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": [
+        "userId", "productId", "nameAr", "nameEn", "packMode",
+        "unitPrice", "quantity", "lineTotal", "createdAt"
+      ]
+    },
+    "SupportTicket": {
+      "title": "SupportTicket",
+      "description": "Customer support ticket linked optionally to an order.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "orderId": { "type": "string" },
+        "category": { "type": "string", "enum": ["DAMAGED", "MISSING_ITEM", "INVOICE", "DELIVERY", "GENERAL"] },
+        "subject": { "type": "string" },
+        "message": { "type": "string" },
+        "status": { "type": "string", "enum": ["OPEN", "IN_REVIEW", "RESOLVED"] },
+        "adminReply": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": [
+        "userId", "orderId", "category", "subject", "message",
+        "status", "adminReply", "createdAt", "updatedAt"
+      ]
+    }
+  },
+  "firestore": {
+    "/categories/{categoryId}": {
+      "schema": { "$ref": "#/entities/Category" },
+      "description": "Catalog categories"
+    },
+    "/products/{productId}": {
+      "schema": { "$ref": "#/entities/Product" },
+      "description": "Multi-tier cleaning products catalog"
+    },
+    "/zones/{zoneId}": {
+      "schema": { "$ref": "#/entities/DeliveryZone" },
+      "description": "Delivery zones and default carrier configuration"
+    },
+    "/coupons/{couponId}": {
+      "schema": { "$ref": "#/entities/Coupon" },
+      "description": "Promo coupon definitions"
+    },
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/UserProfile" },
+      "description": "User profiles and B2B/Wholesale tier verification status"
+    },
+    "/users/{userId}/addresses/{addressId}": {
+      "schema": { "$ref": "#/entities/Address" },
+      "description": "Saved delivery addresses for a user"
+    },
+    "/users/{userId}/cart/{cartItemId}": {
+      "schema": { "$ref": "#/entities/CartItem" },
+      "description": "Active shopping cart items for a user"
+    },
+    "/users/{userId}/loyaltyLogs/{logId}": {
+      "schema": { "$ref": "#/entities/LoyaltyLog" },
+      "description": "Loyalty points transaction ledger"
+    },
+    "/orders/{orderId}": {
+      "schema": { "$ref": "#/entities/Order" },
+      "description": "Customer orders with payment and fulfillment tracking"
+    },
+    "/orders/{orderId}/items/{itemId}": {
+      "schema": { "$ref": "#/entities/OrderItem" },
+      "description": "Order line items"
+    },
+    "/supportTickets/{ticketId}": {
+      "schema": { "$ref": "#/entities/SupportTicket" },
+      "description": "Customer support tickets"
+    }
+  }
+}

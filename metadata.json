@@ -1,0 +1,6 @@
+{
+  "name": "CleanSupply",
+  "description": "Bilingual Arabic RTL / English LTR multi-tier cleaning supplies and commercial hygiene commerce app with wholesale pricing, loyalty rewards, and dual internal-fleet/3rd-party delivery tracking.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

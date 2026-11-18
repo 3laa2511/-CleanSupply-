@@ -1,0 +1,486 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && (
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid)) ||
+        (
+          'email' in request.auth.token &&
+          'email_verified' in request.auth.token &&
+          request.auth.token.email == 'Alaa.moagaza2016@gmail.com' &&
+          request.auth.token.email_verified == true
+        )
+      );
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isValidTimestamp(ts) {
+      return ts is timestamp && ts <= request.time;
+    }
+
+    function isValidCategory(data) {
+      return data.keys().hasAll(['nameAr', 'nameEn', 'iconKey', 'sortOrder', 'createdAt', 'updatedAt']) &&
+             data.keys().hasOnly(['nameAr', 'nameEn', 'iconKey', 'sortOrder', 'createdAt', 'updatedAt']) &&
+             data.nameAr is string && data.nameAr.size() >= 1 && data.nameAr.size() <= 80 &&
+             data.nameEn is string && data.nameEn.size() >= 1 && data.nameEn.size() <= 80 &&
+             data.iconKey is string && data.iconKey.size() >= 1 && data.iconKey.size() <= 40 &&
+             data.sortOrder is int && data.sortOrder >= 0 && data.sortOrder <= 1000 &&
+             isValidTimestamp(data.createdAt) &&
+             isValidTimestamp(data.updatedAt);
+    }
+
+    function isValidProduct(data) {
+      return data.keys().hasAll([
+               'sku', 'nameAr', 'nameEn', 'descriptionAr', 'descriptionEn',
+               'categoryId', 'brand', 'unitLabelAr', 'unitLabelEn', 'cartonSize',
+               'retailPrice', 'wholesalePrice', 'businessPrice', 'bulkMinQty',
+               'bulkDiscountPercent', 'moqRetail', 'moqWholesale', 'moqBusiness',
+               'stockQty', 'imageKey', 'featured', 'active', 'createdAt', 'updatedAt'
+             ]) &&
+             data.keys().hasOnly([
+               'sku', 'nameAr', 'nameEn', 'descriptionAr', 'descriptionEn',
+               'categoryId', 'brand', 'unitLabelAr', 'unitLabelEn', 'cartonSize',
+               'retailPrice', 'wholesalePrice', 'businessPrice', 'bulkMinQty',
+               'bulkDiscountPercent', 'moqRetail', 'moqWholesale', 'moqBusiness',
+               'stockQty', 'imageKey', 'featured', 'active', 'createdAt', 'updatedAt'
+             ]) &&
+             data.sku is string && data.sku.size() >= 2 && data.sku.size() <= 40 &&
+             data.nameAr is string && data.nameAr.size() >= 1 && data.nameAr.size() <= 120 &&
+             data.nameEn is string && data.nameEn.size() >= 1 && data.nameEn.size() <= 120 &&
+             data.descriptionAr is string && data.descriptionAr.size() <= 600 &&
+             data.descriptionEn is string && data.descriptionEn.size() <= 600 &&
+             data.categoryId is string && isValidId(data.categoryId) &&
+             data.brand is string && data.brand.size() >= 1 && data.brand.size() <= 80 &&
+             data.unitLabelAr is string && data.unitLabelAr.size() >= 1 && data.unitLabelAr.size() <= 50 &&
+             data.unitLabelEn is string && data.unitLabelEn.size() >= 1 && data.unitLabelEn.size() <= 50 &&
+             data.cartonSize is int && data.cartonSize >= 1 && data.cartonSize <= 500 &&
+             data.retailPrice is number && data.retailPrice > 0 &&
+             data.wholesalePrice is number && data.wholesalePrice > 0 &&
+             data.businessPrice is number && data.businessPrice > 0 &&
+             data.bulkMinQty is int && data.bulkMinQty >= 1 && data.bulkMinQty <= 1000 &&
+             data.bulkDiscountPercent is int && data.bulkDiscountPercent >= 0 && data.bulkDiscountPercent <= 80 &&
+             data.moqRetail is int && data.moqRetail >= 1 && data.moqRetail <= 100 &&
+             data.moqWholesale is int && data.moqWholesale >= 1 && data.moqWholesale <= 500 &&
+             data.moqBusiness is int && data.moqBusiness >= 1 && data.moqBusiness <= 500 &&
+             data.stockQty is int && data.stockQty >= 0 && data.stockQty <= 1000000 &&
+             data.imageKey is string && data.imageKey.size() >= 1 && data.imageKey.size() <= 60 &&
+             data.featured is bool &&
+             data.active is bool &&
+             isValidTimestamp(data.createdAt) &&
+             isValidTimestamp(data.updatedAt);
+    }
+
+    function isValidZone(data) {
+      return data.keys().hasAll([
+               'nameAr', 'nameEn', 'baseFee', 'freeShippingThreshold',
+               'defaultFulfillmentType', 'estimatedHours', 'carrierDefaultName',
+               'active', 'createdAt', 'updatedAt'
+             ]) &&
+             data.keys().hasOnly([
+               'nameAr', 'nameEn', 'baseFee', 'freeShippingThreshold',
+               'defaultFulfillmentType', 'estimatedHours', 'carrierDefaultName',
+               'active', 'createdAt', 'updatedAt'
+             ]) &&
+             data.nameAr is string && data.nameAr.size() >= 1 && data.nameAr.size() <= 80 &&
+             data.nameEn is string && data.nameEn.size() >= 1 && data.nameEn.size() <= 80 &&
+             data.baseFee is number && data.baseFee >= 0 && data.baseFee <= 5000 &&
+             data.freeShippingThreshold is number && data.freeShippingThreshold >= 0 && data.freeShippingThreshold <= 100000 &&
+             data.defaultFulfillmentType in ['INTERNAL_FLEET', 'THIRD_PARTY_CARRIER'] &&
+             data.estimatedHours is int && data.estimatedHours >= 1 && data.estimatedHours <= 720 &&
+             data.carrierDefaultName is string && data.carrierDefaultName.size() >= 1 && data.carrierDefaultName.size() <= 80 &&
+             data.active is bool &&
+             isValidTimestamp(data.createdAt) &&
+             isValidTimestamp(data.updatedAt);
+    }
+
+    function isValidCoupon(data) {
+      return data.keys().hasAll([
+               'code', 'titleAr', 'titleEn', 'discountType', 'discountValue',
+               'minOrderAmount', 'allowedSegments', 'active', 'createdAt', 'updatedAt'
+             ]) &&
+             data.keys().hasOnly([
+               'code', 'titleAr', 'titleEn', 'discountType', 'discountValue',
+               'minOrderAmount', 'allowedSegments', 'active', 'createdAt', 'updatedAt'
+             ]) &&
+             data.code is string && data.code.size() >= 2 && data.code.size() <= 30 &&
+             data.titleAr is string && data.titleAr.size() >= 1 && data.titleAr.size() <= 100 &&
+             data.titleEn is string && data.titleEn.size() >= 1 && data.titleEn.size() <= 100 &&
+             data.discountType in ['PERCENT', 'FIXED'] &&
+             data.discountValue is number && data.discountValue > 0 && data.discountValue <= 10000 &&
+             data.minOrderAmount is number && data.minOrderAmount >= 0 && data.minOrderAmount <= 100000 &&
+             data.allowedSegments is list && data.allowedSegments.size() >= 1 && data.allowedSegments.size() <= 3 &&
+             data.allowedSegments.hasOnly(['RETAIL', 'WHOLESALE', 'BUSINESS']) &&
+             data.active is bool &&
+             isValidTimestamp(data.createdAt) &&
+             isValidTimestamp(data.updatedAt);
+    }
+
+    function isValidUserProfile(data) {
+      return data.keys().hasAll([
+               'userId', 'displayName', 'email', 'phone', 'segment', 'approvedTier',
+               'verificationStatus', 'loyaltyPoints', 'creditLimit', 'creditUsed',
+               'preferredLocale', 'createdAt', 'updatedAt'
+             ]) &&
+             data.keys().hasOnly([
+               'userId', 'displayName', 'email', 'phone', 'companyName', 'taxId',
+               'segment', 'approvedTier', 'verificationStatus', 'loyaltyPoints',
+               'creditLimit', 'creditUsed', 'preferredLocale', 'createdAt', 'updatedAt'
+             ]) &&
+             data.userId is string && isValidId(data.userId) &&
+             data.displayName is string && data.displayName.size() >= 1 && data.displayName.size() <= 80 &&
+             data.email is string && data.email.size() <= 120 &&
+             data.phone is string && data.phone.size() <= 30 &&
+             (!('companyName' in data) || (data.companyName is string && data.companyName.size() <= 120)) &&
+             (!('taxId' in data) || (data.taxId is string && data.taxId.size() <= 50)) &&
+             data.segment in ['RETAIL', 'WHOLESALE', 'BUSINESS'] &&
+             data.approvedTier in ['STANDARD', 'TIER_A', 'TIER_B', 'ENTERPRISE'] &&
+             data.verificationStatus in ['VERIFIED', 'PENDING_VERIFICATION', 'REJECTED'] &&
+             data.loyaltyPoints is int && data.loyaltyPoints >= 0 && data.loyaltyPoints <= 1000000 &&
+             data.creditLimit is number && data.creditLimit >= 0 && data.creditLimit <= 5000000 &&
+             data.creditUsed is number && data.creditUsed >= 0 && data.creditUsed <= 5000000 &&
+             data.preferredLocale in ['ar', 'en'] &&
+             isValidTimestamp(data.createdAt) &&
+             isValidTimestamp(data.updatedAt);
+    }
+
+    function isValidAddress(data) {
+      return data.keys().hasAll([
+               'label', 'recipientName', 'phone', 'zoneId', 'streetDetails',
+               'buildingFloor', 'lat', 'lng', 'defaultAddress', 'createdAt', 'updatedAt'
+             ]) &&
+             data.keys().hasOnly([
+               'label', 'recipientName', 'phone', 'zoneId', 'streetDetails',
+               'buildingFloor', 'lat', 'lng', 'defaultAddress', 'createdAt', 'updatedAt'
+             ]) &&
+             data.label is string && data.label.size() >= 1 && data.label.size() <= 40 &&
+             data.recipientName is string && data.recipientName.size() >= 1 && data.recipientName.size() <= 80 &&
+             data.phone is string && data.phone.size() >= 6 && data.phone.size() <= 30 &&
+             data.zoneId is string && isValidId(data.zoneId) &&
+             data.streetDetails is string && data.streetDetails.size() >= 3 && data.streetDetails.size() <= 200 &&
+             data.buildingFloor is string && data.buildingFloor.size() <= 60 &&
+             data.lat is number && data.lat >= -90 && data.lat <= 90 &&
+             data.lng is number && data.lng >= -180 && data.lng <= 180 &&
+             data.defaultAddress is bool &&
+             isValidTimestamp(data.createdAt) &&
+             isValidTimestamp(data.updatedAt);
+    }
+
+    function isValidCartItem(data) {
+      return data.keys().hasAll(['productId', 'quantity', 'packMode', 'createdAt', 'updatedAt']) &&
+             data.keys().hasOnly(['productId', 'quantity', 'packMode', 'createdAt', 'updatedAt']) &&
+             data.productId is string && isValidId(data.productId) &&
+             data.quantity is int && data.quantity >= 1 && data.quantity <= 5000 &&
+             data.packMode in ['UNIT', 'CARTON'] &&
+             isValidTimestamp(data.createdAt) &&
+             isValidTimestamp(data.updatedAt);
+    }
+
+    function isValidLoyaltyLog(data) {
+      return data.keys().hasAll(['titleAr', 'titleEn', 'pointsDelta', 'orderId', 'createdAt']) &&
+             data.keys().hasOnly(['titleAr', 'titleEn', 'pointsDelta', 'orderId', 'createdAt']) &&
+             data.titleAr is string && data.titleAr.size() >= 1 && data.titleAr.size() <= 120 &&
+             data.titleEn is string && data.titleEn.size() >= 1 && data.titleEn.size() <= 120 &&
+             data.pointsDelta is int && data.pointsDelta >= -100000 && data.pointsDelta <= 100000 &&
+             data.orderId is string && data.orderId.size() <= 128 &&
+             isValidTimestamp(data.createdAt);
+    }
+
+    function isValidOrder(data) {
+      return data.keys().hasAll([
+               'userId', 'orderNumber', 'customerName', 'customerSegment', 'zoneId',
+               'zoneNameAr', 'zoneNameEn', 'deliveryAddress', 'deliverySlot',
+               'fulfillmentType', 'carrierName', 'trackingNumber', 'driverName',
+               'driverPhone', 'driverLat', 'driverLng', 'destLat', 'destLng',
+               'paymentMethod', 'paymentStatus', 'paymentReference', 'status',
+               'subtotal', 'tierDiscount', 'couponCode', 'couponDiscount',
+               'loyaltyDiscount', 'loyaltyPointsUsed', 'loyaltyPointsEarned',
+               'shippingFee', 'totalAmount', 'itemCount', 'createdAt', 'updatedAt'
+             ]) &&
+             data.keys().hasOnly([
+               'userId', 'orderNumber', 'customerName', 'customerSegment', 'zoneId',
+               'zoneNameAr', 'zoneNameEn', 'deliveryAddress', 'deliverySlot',
+               'fulfillmentType', 'carrierName', 'trackingNumber', 'driverName',
+               'driverPhone', 'driverLat', 'driverLng', 'destLat', 'destLng',
+               'paymentMethod', 'paymentStatus', 'paymentReference', 'status',
+               'subtotal', 'tierDiscount', 'couponCode', 'couponDiscount',
+               'loyaltyDiscount', 'loyaltyPointsUsed', 'loyaltyPointsEarned',
+               'shippingFee', 'totalAmount', 'itemCount', 'createdAt', 'updatedAt'
+             ]) &&
+             data.userId is string && isValidId(data.userId) &&
+             data.orderNumber is string && data.orderNumber.size() >= 3 && data.orderNumber.size() <= 40 &&
+             data.customerName is string && data.customerName.size() >= 1 && data.customerName.size() <= 80 &&
+             data.customerSegment in ['RETAIL', 'WHOLESALE', 'BUSINESS'] &&
+             data.zoneId is string && isValidId(data.zoneId) &&
+             data.zoneNameAr is string && data.zoneNameAr.size() >= 1 && data.zoneNameAr.size() <= 80 &&
+             data.zoneNameEn is string && data.zoneNameEn.size() >= 1 && data.zoneNameEn.size() <= 80 &&
+             data.deliveryAddress is string && data.deliveryAddress.size() >= 3 && data.deliveryAddress.size() <= 240 &&
+             data.deliverySlot is string && data.deliverySlot.size() >= 1 && data.deliverySlot.size() <= 80 &&
+             data.fulfillmentType in ['INTERNAL_FLEET', 'THIRD_PARTY_CARRIER'] &&
+             data.carrierName is string && data.carrierName.size() <= 80 &&
+             data.trackingNumber is string && data.trackingNumber.size() <= 60 &&
+             data.driverName is string && data.driverName.size() <= 80 &&
+             data.driverPhone is string && data.driverPhone.size() <= 30 &&
+             data.driverLat is number && data.driverLat >= -90 && data.driverLat <= 90 &&
+             data.driverLng is number && data.driverLng >= -180 && data.driverLng <= 180 &&
+             data.destLat is number && data.destLat >= -90 && data.destLat <= 90 &&
+             data.destLng is number && data.destLng >= -180 && data.destLng <= 180 &&
+             data.paymentMethod in ['COD', 'CREDIT_INVOICE', 'CARD', 'MOBILE_WALLET'] &&
+             data.paymentStatus in ['PENDING', 'PENDING_VERIFICATION', 'PAID', 'INVOICED'] &&
+             data.paymentReference is string && data.paymentReference.size() <= 80 &&
+             data.status in ['PLACED', 'CONFIRMED', 'PACKED', 'OUT_FOR_DELIVERY', 'DELIVERED', 'CANCELLED'] &&
+             data.subtotal is number && data.subtotal >= 0 &&
+             data.tierDiscount is number && data.tierDiscount >= 0 &&
+             data.couponCode is string && data.couponCode.size() <= 30 &&
+             data.couponDiscount is number && data.couponDiscount >= 0 &&
+             data.loyaltyDiscount is number && data.loyaltyDiscount >= 0 &&
+             data.loyaltyPointsUsed is int && data.loyaltyPointsUsed >= 0 &&
+             data.loyaltyPointsEarned is int && data.loyaltyPointsEarned >= 0 && data.loyaltyPointsEarned <= 500 &&
+             data.shippingFee is number && data.shippingFee >= 0 &&
+             data.totalAmount is number && data.totalAmount >= 0 &&
+             data.itemCount is int && data.itemCount >= 1 && data.itemCount <= 200 &&
+             isValidTimestamp(data.createdAt) &&
+             isValidTimestamp(data.updatedAt);
+    }
+
+    function isValidOrderItem(data) {
+      return data.keys().hasAll([
+               'userId', 'productId', 'nameAr', 'nameEn', 'packMode',
+               'unitPrice', 'quantity', 'lineTotal', 'createdAt'
+             ]) &&
+             data.keys().hasOnly([
+               'userId', 'productId', 'nameAr', 'nameEn', 'packMode',
+               'unitPrice', 'quantity', 'lineTotal', 'createdAt'
+             ]) &&
+             data.userId is string && isValidId(data.userId) &&
+             data.productId is string && isValidId(data.productId) &&
+             data.nameAr is string && data.nameAr.size() >= 1 && data.nameAr.size() <= 120 &&
+             data.nameEn is string && data.nameEn.size() >= 1 && data.nameEn.size() <= 120 &&
+             data.packMode in ['UNIT', 'CARTON'] &&
+             data.unitPrice is number && data.unitPrice > 0 &&
+             data.quantity is int && data.quantity >= 1 && data.quantity <= 5000 &&
+             data.lineTotal is number && data.lineTotal >= 0 &&
+             isValidTimestamp(data.createdAt);
+    }
+
+    function isValidSupportTicket(data) {
+      return data.keys().hasAll([
+               'userId', 'orderId', 'category', 'subject', 'message',
+               'status', 'adminReply', 'createdAt', 'updatedAt'
+             ]) &&
+             data.keys().hasOnly([
+               'userId', 'orderId', 'category', 'subject', 'message',
+               'status', 'adminReply', 'createdAt', 'updatedAt'
+             ]) &&
+             data.userId is string && isValidId(data.userId) &&
+             data.orderId is string && data.orderId.size() <= 128 &&
+             data.category in ['DAMAGED', 'MISSING_ITEM', 'INVOICE', 'DELIVERY', 'GENERAL'] &&
+             data.subject is string && data.subject.size() >= 2 && data.subject.size() <= 120 &&
+             data.message is string && data.message.size() >= 3 && data.message.size() <= 1000 &&
+             data.status in ['OPEN', 'IN_REVIEW', 'RESOLVED'] &&
+             data.adminReply is string && data.adminReply.size() <= 1000 &&
+             isValidTimestamp(data.createdAt) &&
+             isValidTimestamp(data.updatedAt);
+    }
+
+    match /admins/{adminId} {
+      allow get: if isSignedIn() && request.auth.uid == adminId;
+      allow list, create, update, delete: if false;
+    }
+
+    match /categories/{categoryId} {
+      allow get, list: if isSignedIn();
+      allow create: if isAdmin() && isValidId(categoryId) && isValidCategory(incoming());
+      allow update: if isAdmin() && isValidId(categoryId) && isValidCategory(incoming()) &&
+                       incoming().createdAt == existing().createdAt;
+      allow delete: if isAdmin() && isValidId(categoryId);
+    }
+
+    match /products/{productId} {
+      allow get, list: if isSignedIn();
+      allow create: if isAdmin() && isValidId(productId) && isValidProduct(incoming());
+      allow update: if isSignedIn() && isValidId(productId) && isValidProduct(incoming()) &&
+                       incoming().createdAt == existing().createdAt && (
+                         isAdmin() ||
+                         (
+                           incoming().diff(existing()).affectedKeys().hasOnly(['stockQty', 'updatedAt']) &&
+                           incoming().stockQty >= 0 &&
+                           incoming().stockQty <= existing().stockQty
+                         )
+                       );
+      allow delete: if isAdmin() && isValidId(productId);
+    }
+
+    match /zones/{zoneId} {
+      allow get, list: if isSignedIn();
+      allow create: if isAdmin() && isValidId(zoneId) && isValidZone(incoming());
+      allow update: if isAdmin() && isValidId(zoneId) && isValidZone(incoming()) &&
+                       incoming().createdAt == existing().createdAt;
+      allow delete: if isAdmin() && isValidId(zoneId);
+    }
+
+    match /coupons/{couponId} {
+      allow get, list: if isSignedIn();
+      allow create: if isAdmin() && isValidId(couponId) && isValidCoupon(incoming());
+      allow update: if isAdmin() && isValidId(couponId) && isValidCoupon(incoming()) &&
+                       incoming().createdAt == existing().createdAt;
+      allow delete: if isAdmin() && isValidId(couponId);
+    }
+
+    match /users/{userId} {
+      allow get: if isOwner(userId) || isAdmin();
+      allow list: if isAdmin();
+      allow create: if isOwner(userId) && isValidId(userId) &&
+                       isValidUserProfile(incoming()) &&
+                       incoming().userId == userId &&
+                       incoming().approvedTier == 'STANDARD' &&
+                       incoming().loyaltyPoints == 0 &&
+                       incoming().creditLimit == 0 &&
+                       incoming().creditUsed == 0 &&
+                       (
+                         (incoming().segment == 'RETAIL' && incoming().verificationStatus == 'VERIFIED') ||
+                         ((incoming().segment == 'WHOLESALE' || incoming().segment == 'BUSINESS') &&
+                           incoming().verificationStatus == 'PENDING_VERIFICATION')
+                       );
+      allow update: if isSignedIn() && isValidId(userId) &&
+                       isValidUserProfile(incoming()) &&
+                       incoming().userId == existing().userId &&
+                       incoming().createdAt == existing().createdAt && (
+                         isAdmin() ||
+                         (
+                           isOwner(userId) && (
+                             incoming().diff(existing()).affectedKeys().hasOnly([
+                               'displayName', 'phone', 'companyName', 'taxId', 'preferredLocale', 'updatedAt'
+                             ]) ||
+                             (
+                               incoming().diff(existing()).affectedKeys().hasOnly([
+                                 'segment', 'companyName', 'taxId', 'verificationStatus', 'approvedTier', 'updatedAt'
+                               ]) &&
+                               incoming().approvedTier == 'STANDARD' &&
+                               (
+                                 (incoming().segment == 'RETAIL' && incoming().verificationStatus == 'VERIFIED') ||
+                                 ((incoming().segment == 'WHOLESALE' || incoming().segment == 'BUSINESS') &&
+                                   incoming().verificationStatus == 'PENDING_VERIFICATION')
+                               )
+                             ) ||
+                             (
+                               incoming().diff(existing()).affectedKeys().hasOnly([
+                                 'loyaltyPoints', 'creditUsed', 'updatedAt'
+                               ]) &&
+                               incoming().loyaltyPoints >= 0 &&
+                               incoming().loyaltyPoints <= existing().loyaltyPoints + 500 &&
+                               incoming().creditUsed >= existing().creditUsed &&
+                               incoming().creditUsed <= existing().creditLimit
+                             )
+                           )
+                         )
+                       );
+      allow delete: if isAdmin() && isValidId(userId);
+
+      match /addresses/{addressId} {
+        allow get, list: if isOwner(userId);
+        allow create: if isOwner(userId) && isValidId(addressId) && isValidAddress(incoming());
+        allow update: if isOwner(userId) && isValidId(addressId) && isValidAddress(incoming()) &&
+                         incoming().createdAt == existing().createdAt &&
+                         incoming().diff(existing()).affectedKeys().hasOnly([
+                           'label', 'recipientName', 'phone', 'zoneId', 'streetDetails',
+                           'buildingFloor', 'lat', 'lng', 'defaultAddress', 'updatedAt'
+                         ]);
+        allow delete: if isOwner(userId) && isValidId(addressId);
+      }
+
+      match /cart/{cartItemId} {
+        allow get, list: if isOwner(userId);
+        allow create: if isOwner(userId) && isValidId(cartItemId) && isValidCartItem(incoming());
+        allow update: if isOwner(userId) && isValidId(cartItemId) && isValidCartItem(incoming()) &&
+                         incoming().createdAt == existing().createdAt &&
+                         incoming().diff(existing()).affectedKeys().hasOnly([
+                           'quantity', 'packMode', 'updatedAt'
+                         ]);
+        allow delete: if isOwner(userId) && isValidId(cartItemId);
+      }
+
+      match /loyaltyLogs/{logId} {
+        allow get, list: if isOwner(userId) || isAdmin();
+        allow create: if (isOwner(userId) || isAdmin()) && isValidId(logId) &&
+                         isValidLoyaltyLog(incoming()) &&
+                         (isAdmin() || incoming().pointsDelta <= 500);
+        allow update, delete: if false;
+      }
+    }
+
+    match /orders/{orderId} {
+      allow get: if isSignedIn() && isValidId(orderId) &&
+                    (resource.data.userId == request.auth.uid || isAdmin());
+      allow list: if isSignedIn() &&
+                    (resource.data.userId == request.auth.uid || isAdmin());
+      allow create: if isSignedIn() && isValidId(orderId) && isValidOrder(incoming()) &&
+                       incoming().userId == request.auth.uid &&
+                       incoming().status == 'PLACED';
+      allow update: if isSignedIn() && isValidId(orderId) && isValidOrder(incoming()) &&
+                       incoming().userId == existing().userId &&
+                       incoming().createdAt == existing().createdAt && (
+                         isAdmin() ||
+                         (
+                           existing().userId == request.auth.uid &&
+                           (existing().status == 'PLACED' || existing().status == 'CONFIRMED' || existing().status == 'PACKED') &&
+                           incoming().status == 'CANCELLED' &&
+                           incoming().diff(existing()).affectedKeys().hasOnly(['status', 'updatedAt'])
+                         )
+                       );
+      allow delete: if false;
+
+      match /items/{itemId} {
+        allow get, list: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
+        allow create: if isSignedIn() && isValidId(itemId) && isValidOrderItem(incoming()) &&
+                         incoming().userId == request.auth.uid &&
+                         existsAfter(/databases/$(database)/documents/orders/$(orderId)) &&
+                         getAfter(/databases/$(database)/documents/orders/$(orderId)).data.userId == request.auth.uid;
+        allow update, delete: if false;
+      }
+    }
+
+    match /supportTickets/{ticketId} {
+      allow get: if isSignedIn() && isValidId(ticketId) &&
+                    (resource.data.userId == request.auth.uid || isAdmin());
+      allow list: if isSignedIn() &&
+                    (resource.data.userId == request.auth.uid || isAdmin());
+      allow create: if isSignedIn() && isValidId(ticketId) && isValidSupportTicket(incoming()) &&
+                       incoming().userId == request.auth.uid &&
+                       incoming().status == 'OPEN';
+      allow update: if isSignedIn() && isValidId(ticketId) && isValidSupportTicket(incoming()) &&
+                       incoming().userId == existing().userId &&
+                       incoming().createdAt == existing().createdAt && (
+                         isAdmin() ||
+                         (
+                           existing().userId == request.auth.uid &&
+                           existing().status != 'RESOLVED' &&
+                           incoming().diff(existing()).affectedKeys().hasOnly(['message', 'updatedAt'])
+                         )
+                       );
+      allow delete: if false;
+    }
+  }
+}
