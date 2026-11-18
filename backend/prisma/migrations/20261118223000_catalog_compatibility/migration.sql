@@ -1,0 +1,15 @@
+ALTER TABLE "categories"
+  ADD COLUMN "icon_key" TEXT NOT NULL DEFAULT 'detergents';
+
+ALTER TABLE "products"
+  ADD COLUMN "brand" TEXT NOT NULL DEFAULT '',
+  ADD COLUMN "unit_label_ar" TEXT NOT NULL DEFAULT '',
+  ADD COLUMN "unit_label_en" TEXT NOT NULL DEFAULT '',
+  ADD COLUMN "carton_size" INTEGER NOT NULL DEFAULT 1,
+  ADD COLUMN "bulk_min_qty" INTEGER NOT NULL DEFAULT 10,
+  ADD COLUMN "bulk_discount_percent" INTEGER NOT NULL DEFAULT 0,
+  ADD COLUMN "moq_retail" INTEGER NOT NULL DEFAULT 1,
+  ADD COLUMN "moq_wholesale" INTEGER NOT NULL DEFAULT 1,
+  ADD COLUMN "moq_business" INTEGER NOT NULL DEFAULT 1,
+  ADD COLUMN "image_key" TEXT NOT NULL DEFAULT 'detergents',
+  ADD COLUMN "featured" BOOLEAN NOT NULL DEFAULT false;

@@ -6,6 +6,7 @@ import { LoggerModule } from 'nestjs-pino';
 import { AuthModule } from './auth/auth.module';
 import { FirebaseAuthGuard } from './auth/firebase-auth.guard';
 import { PermissionsGuard } from './auth/permissions.guard';
+import { CatalogModule } from './catalog/catalog.module';
 import { CorrelationIdMiddleware } from './common/correlation-id.middleware';
 import { envValidationSchema } from './config/env.validation';
 import { HealthModule } from './health/health.module';
@@ -20,7 +21,7 @@ import { PrismaModule } from './prisma/prisma.module';
       serializers: { req: (req) => ({ id: req.id, method: req.method, url: req.url }) },
     } }),
     ThrottlerModule.forRoot([{ ttl: 60_000, limit: 120 }]),
-    PrismaModule, AuthModule, HealthModule,
+    PrismaModule, AuthModule, CatalogModule, HealthModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: ThrottlerGuard },
