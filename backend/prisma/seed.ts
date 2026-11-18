@@ -1,7 +1,4 @@
-import {
-  CustomerSegment,
-  PrismaClient,
-} from '@prisma/client';
+import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
@@ -16,28 +13,12 @@ const roleDefinitions = [
 ] as const;
 
 const permissionDefinitions = [
-  'dashboard.read',
-  'users.read',
-  'users.manage',
-  'catalog.read',
-  'catalog.manage',
-  'pricing.read',
-  'pricing.manage',
-  'inventory.read',
-  'inventory.manage',
-  'purchasing.read',
-  'purchasing.manage',
-  'orders.read',
-  'orders.manage',
-  'payments.read',
-  'payments.reconcile',
-  'credit.manage',
-  'delivery.read',
-  'delivery.manage',
-  'support.read',
-  'support.manage',
-  'audit.read',
-  'settings.manage',
+  'dashboard.read', 'users.read', 'users.manage',
+  'catalog.read', 'catalog.manage', 'pricing.read', 'pricing.manage',
+  'inventory.read', 'inventory.manage', 'purchasing.read', 'purchasing.manage',
+  'orders.read', 'orders.manage', 'payments.read', 'payments.reconcile',
+  'credit.manage', 'delivery.read', 'delivery.manage', 'support.read',
+  'support.manage', 'audit.read', 'settings.manage',
 ] as const;
 
 const rolePermissions: Record<string, readonly string[]> = {
@@ -90,10 +71,6 @@ async function main(): Promise<void> {
     update: {},
     create: { code: 'CENTRAL', name: 'Central Warehouse', isActive: true },
   });
-
-  // CustomerSegment is imported intentionally to keep generated Prisma enum
-  // availability checked during seed compilation; no customer is seeded.
-  void CustomerSegment.RETAIL;
 }
 
 main()
