@@ -3,13 +3,9 @@ name: CleanSupply Backend CI
 on:
   push:
     branches: [main, "feat/**"]
-    paths:
-      - "backend/**"
-      - ".github/workflows/backend-ci.yml"
+    paths: ["backend/**", ".github/workflows/backend-ci.yml"]
   pull_request:
-    paths:
-      - "backend/**"
-      - ".github/workflows/backend-ci.yml"
+    paths: ["backend/**", ".github/workflows/backend-ci.yml"]
 
 permissions:
   contents: read
@@ -17,6 +13,20 @@ permissions:
 jobs:
   validate-and-build:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: ci
+          POSTGRES_PASSWORD: ci
+          POSTGRES_DB: cleansupply
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U ci -d cleansupply"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
     defaults:
       run:
         working-directory: backend
@@ -33,6 +43,10 @@ jobs:
         run: npm run prisma:validate
       - name: Generate Prisma Client
         run: npm run prisma:generate
+      - name: Apply database migrations
+        run: npm run prisma:migrate:deploy
+      - name: Seed baseline roles and warehouse
+        run: npm run prisma:seed
       - name: Build API
         run: npm run build
       - name: Run unit tests
