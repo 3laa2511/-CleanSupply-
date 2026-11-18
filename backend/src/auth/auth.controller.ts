@@ -14,11 +14,25 @@ export class AuthController {
   async me(@Req() request: AuthenticatedRequest) {
     const claims = request.auth;
     if (!claims?.uid) throw new ConflictException('Verified Firebase identity is unavailable');
+
+    // Firebase may omit optional claims (for example, a phone-only account has no email).
+    // Do not erase profile data that was previously collected through another trusted flow.
+    const profileFields = {
+      ...(claims.email ? { email: claims.email } : {}),
+      ...(claims.phone_number ? { phone: claims.phone_number } : {}),
+      ...(claims.name ? { displayName: claims.name } : {}),
+    };
+
     try {
       const user = await this.prisma.user.upsert({
         where: { firebaseUid: claims.uid },
-        update: { email: claims.email ?? null, phone: claims.phone_number ?? null, displayName: claims.name ?? null },
-        create: { firebaseUid: claims.uid, email: claims.email ?? null, phone: claims.phone_number ?? null, displayName: claims.name ?? null },
+        update: profileFields,
+        create: {
+          firebaseUid: claims.uid,
+          email: claims.email ?? null,
+          phone: claims.phone_number ?? null,
+          displayName: claims.name ?? null,
+        },
         select: {
           id: true, email: true, phone: true, displayName: true, status: true,
           roles: { select: { role: { select: {
