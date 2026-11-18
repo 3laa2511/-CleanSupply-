@@ -26,7 +26,11 @@ export class CatalogQueryDto {
   category?: string;
 
   @IsOptional()
-  @Transform(({ value }) => value === true || value === 'true')
+  @Transform(({ value }) => {
+    if (value === 'true') return true;
+    if (value === 'false') return false;
+    return value;
+  })
   @IsBoolean()
   featured?: boolean;
 }
