@@ -45,3 +45,15 @@ The initial schema is a foundation, not the final commerce schema. It deliberate
 ## Current scope
 
 Phase 1 foundation and Phase 2 initial Prisma data model. Build/test results must be recorded from a real local or CI run before this backend is considered verified.
+
+
+## Firebase authentication and authorization
+
+- Send Firebase ID tokens as `Authorization: Bearer <id-token>`.
+- The global guard verifies tokens with Firebase Admin and checks revocation.
+- On Google Cloud, use workload Application Default Credentials and set `FIREBASE_PROJECT_ID`.
+- For local development, set `GOOGLE_APPLICATION_CREDENTIALS` to a service-account JSON file stored outside this repository.
+- `GET /api/v1/auth/me` creates or refreshes the internal user profile from verified Firebase claims.
+- Business controllers must declare permissions with `@RequirePermissions('catalog.read')`; the global permissions guard checks active status and PostgreSQL role-permission assignments.
+- Only endpoints explicitly marked `@Public()` bypass Firebase authentication. Health is public.
+- No user is automatically granted an administrative role; initial administrator assignment must be a controlled provisioning operation.
