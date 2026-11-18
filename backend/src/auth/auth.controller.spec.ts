@@ -28,7 +28,7 @@ describe('AuthController', () => {
         firebaseUid: 'firebase-uid', email: null,
         phone: '+201000000000', displayName: null,
       },
-      update: {},
+      update: { phone: '+201000000000' },
     }));
     expect(result).toMatchObject({ id: 'user-1', status: 'ACTIVE', roles: [] });
   });
