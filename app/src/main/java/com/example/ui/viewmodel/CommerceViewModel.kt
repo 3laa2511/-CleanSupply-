@@ -3,6 +3,7 @@ package com.example.ui.viewmodel
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.core.designsystem.AppThemeMode
 import com.example.data.firestore.CommerceRepository
 import com.example.data.firestore.SeedData
 import com.example.data.model.Address
@@ -28,6 +29,7 @@ import com.example.ui.i18n.LanguagePreferences
 import com.google.firebase.firestore.FirebaseFirestoreException
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -64,6 +66,7 @@ data class CatalogFilters(
     val searchQuery: String = "",
     val selectedCategoryId: String? = null,
     val bulkOnly: Boolean = false,
+    val inStockOnly: Boolean = false,
     val sortOption: SortOption = SortOption.FEATURED
 )
 
@@ -80,6 +83,12 @@ class CommerceViewModel(
     val language: StateFlow<AppLanguage> = languagePreferences.languageFlow
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000L), AppLanguage.ARABIC)
 
+    val themeMode: StateFlow<AppThemeMode> = languagePreferences.themeModeFlow
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000L), AppThemeMode.SYSTEM)
+
+    val recentSearches: StateFlow<List<String>> = languagePreferences.recentSearchesFlow
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000L), emptyList())
+
     private val _filters = MutableStateFlow(CatalogFilters())
     val filters: StateFlow<CatalogFilters> = _filters.asStateFlow()
 
@@ -89,11 +98,17 @@ class CommerceViewModel(
     private val _selectedOrderId = MutableStateFlow<String?>(null)
     val selectedOrderId: StateFlow<String?> = _selectedOrderId.asStateFlow()
 
+    private val _recentlyViewedIds = MutableStateFlow<List<String>>(emptyList())
+    val recentlyViewedIds: StateFlow<List<String>> = _recentlyViewedIds.asStateFlow()
+
     private val _snackbarMessage = MutableStateFlow<String?>(null)
     val snackbarMessage: StateFlow<String?> = _snackbarMessage.asStateFlow()
 
     private val _isSubmittingOrder = MutableStateFlow(false)
     val isSubmittingOrder: StateFlow<Boolean> = _isSubmittingOrder.asStateFlow()
+
+    private val _isRefreshing = MutableStateFlow(false)
+    val isRefreshing: StateFlow<Boolean> = _isRefreshing.asStateFlow()
 
     init {
         viewModelScope.launch {
@@ -184,6 +199,12 @@ class CommerceViewModel(
             MutableStateFlow(emptyList())
         }
 
+    val recentlyViewedProducts: StateFlow<List<Product>> =
+        combine(products, _recentlyViewedIds) { list, ids ->
+            val byId = list.associateBy { it.id }
+            ids.mapNotNull { byId[it] }
+        }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000L), emptyList())
+
     val filteredProducts: StateFlow<List<Product>> =
         combine(products, _filters, userProfileState) { list, f, profState ->
             val profile = (profState as? UiState.Success)?.data
@@ -191,12 +212,13 @@ class CommerceViewModel(
             val filtered = list.filter { p ->
                 val matchesCat = f.selectedCategoryId == null || p.categoryId == f.selectedCategoryId
                 val matchesBulk = !f.bulkOnly || p.bulkDiscountPercent > 0L
+                val matchesStock = !f.inStockOnly || p.stockQty > 0L
                 val matchesQuery = q.isBlank() ||
                     p.nameAr.lowercase().contains(q) ||
                     p.nameEn.lowercase().contains(q) ||
                     p.sku.lowercase().contains(q) ||
                     p.brand.lowercase().contains(q)
-                matchesCat && matchesBulk && matchesQuery
+                matchesCat && matchesBulk && matchesStock && matchesQuery
             }
             when (f.sortOption) {
                 SortOption.FEATURED -> filtered.sortedByDescending { it.featured }
@@ -242,14 +264,51 @@ class CommerceViewModel(
 
     fun toggleLanguage() {
         val next = if (language.value == AppLanguage.ARABIC) AppLanguage.ENGLISH else AppLanguage.ARABIC
+        setLanguage(next)
+    }
+
+    fun setLanguage(next: AppLanguage) {
         viewModelScope.launch {
             languagePreferences.setLanguage(next)
             repository.updatePreferredLocale(currentUserId, next.code)
         }
     }
 
+    fun setThemeMode(mode: AppThemeMode) {
+        viewModelScope.launch {
+            languagePreferences.setThemeMode(mode)
+        }
+    }
+
+    fun triggerRefresh() {
+        if (_isRefreshing.value) return
+        viewModelScope.launch {
+            _isRefreshing.value = true
+            delay(450L)
+            _isRefreshing.value = false
+        }
+    }
+
+    fun recordProductViewed(productId: String) {
+        _recentlyViewedIds.update { current ->
+            (listOf(productId) + current.filterNot { it == productId }).take(8)
+        }
+    }
+
     fun updateSearch(query: String) {
         _filters.update { it.copy(searchQuery = query) }
+    }
+
+    fun commitRecentSearch(query: String) {
+        viewModelScope.launch {
+            languagePreferences.addRecentSearch(query)
+        }
+    }
+
+    fun clearRecentSearches() {
+        viewModelScope.launch {
+            languagePreferences.clearRecentSearches()
+        }
     }
 
     fun selectCategory(categoryId: String?) {
@@ -258,6 +317,14 @@ class CommerceViewModel(
 
     fun toggleBulkOnly() {
         _filters.update { it.copy(bulkOnly = !it.bulkOnly) }
+    }
+
+    fun setBulkOnly(enabled: Boolean) {
+        _filters.update { it.copy(bulkOnly = enabled) }
+    }
+
+    fun toggleInStockOnly() {
+        _filters.update { it.copy(inStockOnly = !it.inStockOnly) }
     }
 
     fun setSortOption(sort: SortOption) {
@@ -277,6 +344,20 @@ class CommerceViewModel(
             repository.upsertCartItem(currentUserId, productId, quantity, packMode)
                 .onSuccess { if (confirmationMsg != null) _snackbarMessage.value = confirmationMsg }
                 .onFailure { _snackbarMessage.value = it.localizedMessage ?: "Failed to update cart" }
+        }
+    }
+
+    fun importGuestCart(items: List<CartItem>) {
+        if (items.isEmpty()) return
+        viewModelScope.launch {
+            items.forEach { item ->
+                repository.upsertCartItem(
+                    userId = currentUserId,
+                    productId = item.productId,
+                    quantity = item.quantity,
+                    packMode = item.packModeEnum()
+                )
+            }
         }
     }
 
@@ -341,6 +422,13 @@ class CommerceViewModel(
                 buildingFloor = buildingFloor,
                 defaultAddress = true
             ).onFailure { _snackbarMessage.value = it.localizedMessage }
+        }
+    }
+
+    fun deleteAddress(addressId: String) {
+        viewModelScope.launch {
+            repository.deleteAddress(currentUserId, addressId)
+                .onFailure { _snackbarMessage.value = it.localizedMessage }
         }
     }
 
