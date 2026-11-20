@@ -1,9 +1,6 @@
 package com.example.feature.account
 
 import androidx.activity.compose.BackHandler
-import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -24,10 +21,13 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -37,14 +37,9 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.credentials.CredentialManager
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.navigation.compose.NavHost
-import androidx.navigation.compose.composable
-import androidx.navigation.compose.currentBackStackEntryAsState
-import androidx.navigation.compose.rememberNavController
 import com.example.ROUTE_ACCOUNT
 import com.example.ROUTE_CART
 import com.example.ROUTE_CATEGORIES
-import com.example.ROUTE_CHECKOUT
 import com.example.ROUTE_HOME
 import com.example.ROUTE_SEARCH
 import com.example.core.components.AppShellDestination
@@ -97,9 +92,9 @@ fun GuestMainShell(
     val connectivityObserver = remember(context) { ConnectivityObserver(context) }
     val isConnected by connectivityObserver.observeIsConnected().collectAsStateWithLifecycle(initialValue = true)
 
-    val navController = rememberNavController()
-    val backStackEntry by navController.currentBackStackEntryAsState()
-    val currentRoute = backStackEntry?.destination?.route ?: ROUTE_HOME
+    var currentTabRoute by rememberSaveable { mutableStateOf(ROUTE_HOME) }
+    var showCheckout by rememberSaveable { mutableStateOf(false) }
+    val tabStateHolder = rememberSaveableStateHolder()
 
     val categories = SeedData.defaultCategories
     val allProducts = SeedData.defaultProducts
@@ -117,14 +112,27 @@ fun GuestMainShell(
 
     LaunchedEffect(snackbarText) {
         val msg = snackbarText ?: return@LaunchedEffect
+        snackbarHostState.currentSnackbarData?.dismiss()
         snackbarHostState.showSnackbar(msg)
         snackbarText = null
     }
 
-    if (inspectedProduct != null) {
-        BackHandler { inspectedProduct = null }
-    } else if (currentRoute == ROUTE_HOME) {
-        BackHandler { onExitGuestToAuth() }
+    LaunchedEffect(showCheckout, currentTabRoute) {
+        if (showCheckout || currentTabRoute == ROUTE_CART) {
+            snackbarText = null
+            snackbarHostState.currentSnackbarData?.dismiss()
+        }
+    }
+
+    BackHandler(enabled = inspectedProduct != null || showCheckout || currentTabRoute != ROUTE_HOME) {
+        when {
+            inspectedProduct != null -> inspectedProduct = null
+            showCheckout -> showCheckout = false
+            currentTabRoute != ROUTE_HOME -> currentTabRoute = ROUTE_HOME
+        }
+    }
+    BackHandler(enabled = inspectedProduct == null && !showCheckout && currentTabRoute == ROUTE_HOME) {
+        onExitGuestToAuth()
     }
 
     fun openProduct(prod: Product) {
@@ -132,28 +140,32 @@ fun GuestMainShell(
         inspectedProduct = prod
     }
 
-    val recentlyViewedProducts = remember(allProducts, recentlyViewedIds) {
-        val byId = allProducts.associateBy { it.id }
-        recentlyViewedIds.mapNotNull { byId[it] }
+    val recentlyViewedProducts by remember(allProducts) {
+        derivedStateOf {
+            val byId = allProducts.associateBy { it.id }
+            recentlyViewedIds.mapNotNull { byId[it] }
+        }
     }
 
-    val filteredProducts = remember(allProducts, filters) {
-        val q = filters.searchQuery.trim().lowercase()
-        val filtered = allProducts.filter { p ->
-            val matchesCat = filters.selectedCategoryId == null || p.categoryId == filters.selectedCategoryId
-            val matchesBulk = !filters.bulkOnly || p.bulkDiscountPercent > 0L
-            val matchesStock = !filters.inStockOnly || p.stockQty > 0L
-            val matchesQuery = q.isBlank() ||
-                p.nameAr.lowercase().contains(q) ||
-                p.nameEn.lowercase().contains(q) ||
-                p.sku.lowercase().contains(q) ||
-                p.brand.lowercase().contains(q)
-            matchesCat && matchesBulk && matchesStock && matchesQuery
-        }
-        when (filters.sortOption) {
-            SortOption.FEATURED -> filtered.sortedByDescending { it.featured }
-            SortOption.PRICE_LOW -> filtered.sortedBy { PricingEngine.resolveTierBaseUnitPrice(it, null) }
-            SortOption.PRICE_HIGH -> filtered.sortedByDescending { PricingEngine.resolveTierBaseUnitPrice(it, null) }
+    val filteredProducts by remember(allProducts) {
+        derivedStateOf {
+            val q = filters.searchQuery.trim().lowercase()
+            val filtered = allProducts.filter { p ->
+                val matchesCat = filters.selectedCategoryId == null || p.categoryId == filters.selectedCategoryId
+                val matchesBulk = !filters.bulkOnly || p.bulkDiscountPercent > 0L
+                val matchesStock = !filters.inStockOnly || p.stockQty > 0L
+                val matchesQuery = q.isBlank() ||
+                    p.nameAr.lowercase().contains(q) ||
+                    p.nameEn.lowercase().contains(q) ||
+                    p.sku.lowercase().contains(q) ||
+                    p.brand.lowercase().contains(q)
+                matchesCat && matchesBulk && matchesStock && matchesQuery
+            }
+            when (filters.sortOption) {
+                SortOption.FEATURED -> filtered.sortedByDescending { it.featured }
+                SortOption.PRICE_LOW -> filtered.sortedBy { PricingEngine.resolveTierBaseUnitPrice(it, null) }
+                SortOption.PRICE_HIGH -> filtered.sortedByDescending { PricingEngine.resolveTierBaseUnitPrice(it, null) }
+            }
         }
     }
 
@@ -203,12 +215,9 @@ fun GuestMainShell(
         )
     }
 
-    fun navigateTo(route: String) {
-        navController.navigate(route) {
-            popUpTo(ROUTE_HOME) { saveState = true }
-            launchSingleTop = true
-            restoreState = true
-        }
+    fun navigateToTab(route: String) {
+        showCheckout = false
+        currentTabRoute = route
     }
 
     val destinations = remember(s) {
@@ -223,139 +232,18 @@ fun GuestMainShell(
 
     AppShellScaffold(
         destinations = destinations,
-        currentRoute = currentRoute,
+        currentRoute = currentTabRoute,
         cartBadgeCount = guestCartItems.size,
-        isCheckoutRoute = currentRoute == ROUTE_CHECKOUT,
+        isCheckoutRoute = showCheckout,
         isConnected = isConnected,
         snackbarHostState = snackbarHostState,
-        onNavigate = ::navigateTo,
-        onBackClick = { navController.popBackStack() },
+        onNavigate = ::navigateToTab,
+        onBackClick = { showCheckout = false },
         onToggleLanguage = onToggleLanguage,
         badgeLabel = s.guestBadge
     ) {
-        NavHost(
-            navController = navController,
-            startDestination = ROUTE_HOME,
-            enterTransition = { fadeIn(animationSpec = tween(150)) },
-            exitTransition = { fadeOut(animationSpec = tween(110)) },
-            popEnterTransition = { fadeIn(animationSpec = tween(150)) },
-            popExitTransition = { fadeOut(animationSpec = tween(110)) },
-            modifier = Modifier.fillMaxSize()
-        ) {
-            composable(ROUTE_HOME) {
-                HomeScreen(
-                    profile = null,
-                    activeZone = zones.firstOrNull(),
-                    categories = categories,
-                    products = allProducts,
-                    recentlyViewed = recentlyViewedProducts,
-                    recentOrders = emptyList(),
-                    isRefreshing = isRefreshing,
-                    onRefresh = {
-                        scope.launch {
-                            isRefreshing = true
-                            delay(350L)
-                            isRefreshing = false
-                        }
-                    },
-                    onOpenSearch = { navigateTo(ROUTE_SEARCH) },
-                    onOpenAllCategories = { navigateTo(ROUTE_CATEGORIES) },
-                    onExploreBulkDeals = {
-                        filters = filters.copy(bulkOnly = true)
-                        navigateTo(ROUTE_SEARCH)
-                    },
-                    onSelectCategory = { catId ->
-                        filters = filters.copy(selectedCategoryId = catId)
-                        navigateTo(ROUTE_SEARCH)
-                    },
-                    onOpenProductDetail = ::openProduct,
-                    onQuickAdd = { prod ->
-                        val moq = PricingEngine.resolveMoqUnits(prod, null)
-                        upsertGuestCart(prod.id, moq, PackMode.UNIT, s.addedToCart)
-                    },
-                    onReorder = {},
-                    onOpenAllCatalog = {
-                        filters = filters.copy(selectedCategoryId = null)
-                        navigateTo(ROUTE_SEARCH)
-                    },
-                    onOpenOrders = { navigateTo(ROUTE_ACCOUNT) }
-                )
-            }
-
-            composable(ROUTE_CATEGORIES) {
-                CategoriesScreen(
-                    categories = categories,
-                    products = allProducts,
-                    selectedCategoryId = filters.selectedCategoryId,
-                    onSelectCategory = { catId ->
-                        filters = filters.copy(selectedCategoryId = catId)
-                        navigateTo(ROUTE_SEARCH)
-                    }
-                )
-            }
-
-            composable(ROUTE_SEARCH) {
-                SearchCatalogScreen(
-                    categories = categories,
-                    products = filteredProducts,
-                    filters = filters,
-                    recentSearches = recentSearches,
-                    profile = null,
-                    isRefreshing = isRefreshing,
-                    onRefresh = {
-                        scope.launch {
-                            isRefreshing = true
-                            delay(350L)
-                            isRefreshing = false
-                        }
-                    },
-                    onSearchChange = { filters = filters.copy(searchQuery = it) },
-                    onCommitSearch = onCommitRecentSearch,
-                    onClearRecentSearches = onClearRecentSearches,
-                    onSelectCategory = { filters = filters.copy(selectedCategoryId = it) },
-                    onToggleBulkOnly = { filters = filters.copy(bulkOnly = !filters.bulkOnly) },
-                    onToggleInStockOnly = { filters = filters.copy(inStockOnly = !filters.inStockOnly) },
-                    onSelectSort = { filters = filters.copy(sortOption = it) },
-                    onOpenProductDetail = ::openProduct,
-                    onQuickAdd = { prod ->
-                        val moq = PricingEngine.resolveMoqUnits(prod, null)
-                        upsertGuestCart(prod.id, moq, PackMode.UNIT, s.addedToCart)
-                    },
-                    onResetFilters = { filters = CatalogFilters(sortOption = filters.sortOption) }
-                )
-            }
-
-            composable(ROUTE_CART) {
-                CartScreen(
-                    summary = checkoutSummary,
-                    profile = null,
-                    coupons = coupons,
-                    draft = draft,
-                    onBrowseCatalog = { navigateTo(ROUTE_SEARCH) },
-                    onUpdateCartQty = { prodId, qty, mode ->
-                        upsertGuestCart(prodId, qty, mode)
-                    },
-                    onApplyCoupon = { code ->
-                        val clean = code.trim().uppercase()
-                        if (clean.isEmpty()) {
-                            draft = draft.copy(appliedCouponCode = "", couponError = false)
-                        } else {
-                            val match = coupons.firstOrNull { it.code.equals(clean, ignoreCase = true) }
-                            val valid = match != null && PricingEngine.isCouponEligible(match, null, checkoutSummary.effectiveSubtotal)
-                            draft = if (valid) {
-                                draft.copy(appliedCouponCode = clean, couponError = false)
-                            } else {
-                                draft.copy(couponError = true)
-                            }
-                        }
-                    },
-                    onRemoveCoupon = { draft = draft.copy(appliedCouponCode = "", couponError = false) },
-                    onToggleLoyalty = {},
-                    onProceedToCheckout = { navController.navigate(ROUTE_CHECKOUT) }
-                )
-            }
-
-            composable(ROUTE_CHECKOUT) {
+        Box(modifier = Modifier.fillMaxSize()) {
+            if (showCheckout) {
                 CheckoutScreen(
                     summary = checkoutSummary,
                     profile = null,
@@ -371,22 +259,129 @@ fun GuestMainShell(
                     onSelectPayment = { method: PaymentMethod -> draft = draft.copy(paymentMethod = method) },
                     onPaymentRefChange = { draft = draft.copy(paymentReference = it) },
                     onPlaceOrder = {},
-                    onBack = { navController.popBackStack() },
+                    onBack = { showCheckout = false },
                     isGuest = true,
                     onSignInToCheckout = { triggerGoogleSignIn() }
                 )
-            }
+            } else {
+                tabStateHolder.SaveableStateProvider(key = currentTabRoute) {
+                    when (currentTabRoute) {
+                        ROUTE_HOME -> HomeScreen(
+                            profile = null,
+                            activeZone = zones.firstOrNull(),
+                            categories = categories,
+                            products = allProducts,
+                            recentlyViewed = recentlyViewedProducts,
+                            recentOrders = emptyList(),
+                            isRefreshing = isRefreshing,
+                            onRefresh = {
+                                scope.launch {
+                                    isRefreshing = true
+                                    delay(350L)
+                                    isRefreshing = false
+                                }
+                            },
+                            onOpenSearch = { navigateToTab(ROUTE_SEARCH) },
+                            onOpenAllCategories = { navigateToTab(ROUTE_CATEGORIES) },
+                            onExploreBulkDeals = {
+                                filters = filters.copy(bulkOnly = true)
+                                navigateToTab(ROUTE_SEARCH)
+                            },
+                            onSelectCategory = { catId ->
+                                filters = filters.copy(selectedCategoryId = catId)
+                                navigateToTab(ROUTE_SEARCH)
+                            },
+                            onOpenProductDetail = ::openProduct,
+                            onQuickAdd = { prod ->
+                                val moq = PricingEngine.resolveMoqUnits(prod, null)
+                                upsertGuestCart(prod.id, moq, PackMode.UNIT, s.addedToCart)
+                            },
+                            onReorder = {},
+                            onOpenAllCatalog = {
+                                filters = filters.copy(selectedCategoryId = null)
+                                navigateToTab(ROUTE_SEARCH)
+                            },
+                            onOpenOrders = { navigateToTab(ROUTE_ACCOUNT) }
+                        )
 
-            composable(ROUTE_ACCOUNT) {
-                GuestAccountScreen(
-                    isSigningIn = isSigningIn,
-                    currentLanguage = currentLanguage,
-                    currentThemeMode = currentThemeMode,
-                    onSelectLanguage = onSelectLanguage,
-                    onSelectThemeMode = onSelectThemeMode,
-                    onSignInWithGoogle = { triggerGoogleSignIn() },
-                    onBackToWelcome = onExitGuestToAuth
-                )
+                        ROUTE_CATEGORIES -> CategoriesScreen(
+                            categories = categories,
+                            products = allProducts,
+                            selectedCategoryId = filters.selectedCategoryId,
+                            onSelectCategory = { catId ->
+                                filters = filters.copy(selectedCategoryId = catId)
+                                navigateToTab(ROUTE_SEARCH)
+                            }
+                        )
+
+                        ROUTE_SEARCH -> SearchCatalogScreen(
+                            categories = categories,
+                            products = filteredProducts,
+                            filters = filters,
+                            recentSearches = recentSearches,
+                            profile = null,
+                            isRefreshing = isRefreshing,
+                            onRefresh = {
+                                scope.launch {
+                                    isRefreshing = true
+                                    delay(350L)
+                                    isRefreshing = false
+                                }
+                            },
+                            onSearchChange = { filters = filters.copy(searchQuery = it) },
+                            onCommitSearch = onCommitRecentSearch,
+                            onClearRecentSearches = onClearRecentSearches,
+                            onSelectCategory = { filters = filters.copy(selectedCategoryId = it) },
+                            onToggleBulkOnly = { filters = filters.copy(bulkOnly = !filters.bulkOnly) },
+                            onToggleInStockOnly = { filters = filters.copy(inStockOnly = !filters.inStockOnly) },
+                            onSelectSort = { filters = filters.copy(sortOption = it) },
+                            onOpenProductDetail = ::openProduct,
+                            onQuickAdd = { prod ->
+                                val moq = PricingEngine.resolveMoqUnits(prod, null)
+                                upsertGuestCart(prod.id, moq, PackMode.UNIT, s.addedToCart)
+                            },
+                            onResetFilters = { filters = CatalogFilters(sortOption = filters.sortOption) }
+                        )
+
+                        ROUTE_CART -> CartScreen(
+                            summary = checkoutSummary,
+                            profile = null,
+                            coupons = coupons,
+                            draft = draft,
+                            onBrowseCatalog = { navigateToTab(ROUTE_SEARCH) },
+                            onUpdateCartQty = { prodId, qty, mode ->
+                                upsertGuestCart(prodId, qty, mode)
+                            },
+                            onApplyCoupon = { code ->
+                                val clean = code.trim().uppercase()
+                                if (clean.isEmpty()) {
+                                    draft = draft.copy(appliedCouponCode = "", couponError = false)
+                                } else {
+                                    val match = coupons.firstOrNull { it.code.equals(clean, ignoreCase = true) }
+                                    val valid = match != null && PricingEngine.isCouponEligible(match, null, checkoutSummary.effectiveSubtotal)
+                                    draft = if (valid) {
+                                        draft.copy(appliedCouponCode = clean, couponError = false)
+                                    } else {
+                                        draft.copy(couponError = true)
+                                    }
+                                }
+                            },
+                            onRemoveCoupon = { draft = draft.copy(appliedCouponCode = "", couponError = false) },
+                            onToggleLoyalty = {},
+                            onProceedToCheckout = { showCheckout = true }
+                        )
+
+                        ROUTE_ACCOUNT -> GuestAccountScreen(
+                            isSigningIn = isSigningIn,
+                            currentLanguage = currentLanguage,
+                            currentThemeMode = currentThemeMode,
+                            onSelectLanguage = onSelectLanguage,
+                            onSelectThemeMode = onSelectThemeMode,
+                            onSignInWithGoogle = { triggerGoogleSignIn() },
+                            onBackToWelcome = onExitGuestToAuth
+                        )
+                    }
+                }
             }
         }
     }
@@ -445,7 +440,7 @@ fun GuestAccountScreen(
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .background(Brush.horizontalGradient(listOf(colors.brandSlate, colors.brandSlateSurface)))
+                        .background(Brush.horizontalGradient(listOf(colors.brandBanner, colors.brandBannerSurface)))
                         .padding(spacing.lg)
                 ) {
                     Column(
@@ -454,30 +449,30 @@ fun GuestAccountScreen(
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Surface(
-                            color = colors.heroAccent.copy(alpha = 0.20f),
+                            color = colors.heroAccent.copy(alpha = 0.22f),
                             shape = shapes.largeSurface,
-                            border = BorderStroke(1.dp, colors.heroAccent.copy(alpha = 0.45f)),
-                            modifier = Modifier.size(64.dp)
+                            border = BorderStroke(1.dp, colors.heroAccent.copy(alpha = 0.50f)),
+                            modifier = Modifier.size(60.dp)
                         ) {
                             Box(contentAlignment = Alignment.Center) {
                                 Icon(
                                     imageVector = CleanSupplyIcons.NavAccountActive,
                                     contentDescription = null,
                                     tint = colors.heroAccent,
-                                    modifier = Modifier.size(32.dp)
+                                    modifier = Modifier.size(30.dp)
                                 )
                             }
                         }
                         Text(
                             text = s.guestSignInBannerTitle,
                             style = type.headlineSmall,
-                            color = colors.onPrimary,
+                            color = colors.onBrandBanner,
                             textAlign = TextAlign.Center
                         )
                         Text(
                             text = s.guestAccountEmptyDesc,
                             style = type.bodySmall,
-                            color = colors.onPrimary.copy(alpha = 0.82f),
+                            color = colors.onBrandBanner.copy(alpha = 0.84f),
                             textAlign = TextAlign.Center
                         )
                     }

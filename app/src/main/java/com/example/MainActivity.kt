@@ -5,9 +5,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
@@ -18,6 +16,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -27,10 +26,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
-import androidx.navigation.compose.NavHost
-import androidx.navigation.compose.composable
-import androidx.navigation.compose.currentBackStackEntryAsState
-import androidx.navigation.compose.rememberNavController
 import com.example.core.components.AppShellDestination
 import com.example.core.components.AppShellScaffold
 import com.example.core.components.ProductDetailSheet
@@ -197,54 +192,44 @@ fun AuthenticatedMainShell(viewModel: CommerceViewModel) {
     val connectivityObserver = remember(context) { ConnectivityObserver(context) }
     val isConnected by connectivityObserver.observeIsConnected().collectAsStateWithLifecycle(initialValue = true)
 
-    val navController = rememberNavController()
-    val backStackEntry by navController.currentBackStackEntryAsState()
-    val currentRoute = backStackEntry?.destination?.route ?: ROUTE_HOME
-
-    val currentLanguage by viewModel.language.collectAsStateWithLifecycle()
-    val currentThemeMode by viewModel.themeMode.collectAsStateWithLifecycle()
-    val recentSearches by viewModel.recentSearches.collectAsStateWithLifecycle()
-    val profileState by viewModel.userProfileState.collectAsStateWithLifecycle()
-    val profile = (profileState as? UiState.Success)?.data
-    val categories by viewModel.categories.collectAsStateWithLifecycle()
-    val allProducts by viewModel.products.collectAsStateWithLifecycle()
-    val filteredProducts by viewModel.filteredProducts.collectAsStateWithLifecycle()
-    val recentlyViewed by viewModel.recentlyViewedProducts.collectAsStateWithLifecycle()
-    val filters by viewModel.filters.collectAsStateWithLifecycle()
+    // Scoped outer shell states ONLY: prevents whole-shell recomposition on tab-local updates
     val cartItems by viewModel.cartItems.collectAsStateWithLifecycle()
-    val checkoutSummary by viewModel.checkoutSummary.collectAsStateWithLifecycle()
-    val addresses by viewModel.addresses.collectAsStateWithLifecycle()
-    val activeAddress by viewModel.activeAddress.collectAsStateWithLifecycle()
-    val zones by viewModel.zones.collectAsStateWithLifecycle()
-    val activeZone by viewModel.activeZone.collectAsStateWithLifecycle()
-    val coupons by viewModel.coupons.collectAsStateWithLifecycle()
-    val draft by viewModel.checkoutDraft.collectAsStateWithLifecycle()
-    val isSubmitting by viewModel.isSubmittingOrder.collectAsStateWithLifecycle()
-    val isRefreshing by viewModel.isRefreshing.collectAsStateWithLifecycle()
-    val ordersState by viewModel.ordersState.collectAsStateWithLifecycle()
-    val selectedOrderId by viewModel.selectedOrderId.collectAsStateWithLifecycle()
-    val selectedOrderItems by viewModel.selectedOrderItems.collectAsStateWithLifecycle()
-    val loyaltyLogs by viewModel.loyaltyLogs.collectAsStateWithLifecycle()
-    val supportTickets by viewModel.supportTickets.collectAsStateWithLifecycle()
-    val adminUsers by viewModel.adminUsers.collectAsStateWithLifecycle()
     val snackbarMessage by viewModel.snackbarMessage.collectAsStateWithLifecycle()
+
+    var currentTabRoute by rememberSaveable { mutableStateOf(ROUTE_HOME) }
+    var showCheckout by rememberSaveable { mutableStateOf(false) }
+    val tabStateHolder = rememberSaveableStateHolder()
 
     val snackbarHostState = remember { SnackbarHostState() }
     var inspectedProduct by remember { mutableStateOf<Product?>(null) }
 
     LaunchedEffect(snackbarMessage) {
         val msg = snackbarMessage ?: return@LaunchedEffect
+        snackbarHostState.currentSnackbarData?.dismiss()
         snackbarHostState.showSnackbar(msg)
         viewModel.clearSnackbar()
     }
 
-    if (inspectedProduct != null) {
-        BackHandler { inspectedProduct = null }
+    LaunchedEffect(showCheckout, currentTabRoute) {
+        if (showCheckout || currentTabRoute == ROUTE_CART) {
+            viewModel.clearSnackbar()
+            snackbarHostState.currentSnackbarData?.dismiss()
+        }
     }
 
-    fun openProduct(prod: Product) {
-        viewModel.recordProductViewed(prod.id)
-        inspectedProduct = prod
+    BackHandler(enabled = inspectedProduct != null || showCheckout || currentTabRoute != ROUTE_HOME) {
+        when {
+            inspectedProduct != null -> inspectedProduct = null
+            showCheckout -> showCheckout = false
+            currentTabRoute != ROUTE_HOME -> currentTabRoute = ROUTE_HOME
+        }
+    }
+
+    val openProduct: (Product) -> Unit = remember(viewModel) {
+        { prod ->
+            viewModel.recordProductViewed(prod.id)
+            inspectedProduct = prod
+        }
     }
 
     val destinations = remember(s) {
@@ -257,214 +242,343 @@ fun AuthenticatedMainShell(viewModel: CommerceViewModel) {
         )
     }
 
-    fun navigateTo(route: String) {
-        navController.navigate(route) {
-            popUpTo(ROUTE_HOME) { saveState = true }
-            launchSingleTop = true
-            restoreState = true
+    val navigateToTab: (String) -> Unit = remember {
+        { route ->
+            showCheckout = false
+            currentTabRoute = route
         }
     }
 
     AppShellScaffold(
         destinations = destinations,
-        currentRoute = currentRoute,
+        currentRoute = currentTabRoute,
         cartBadgeCount = cartItems.size,
-        isCheckoutRoute = currentRoute == ROUTE_CHECKOUT,
+        isCheckoutRoute = showCheckout,
         isConnected = isConnected,
         snackbarHostState = snackbarHostState,
-        onNavigate = ::navigateTo,
-        onBackClick = { navController.popBackStack() },
-        onToggleLanguage = { viewModel.toggleLanguage() }
+        onNavigate = navigateToTab,
+        onBackClick = { showCheckout = false },
+        onToggleLanguage = viewModel::toggleLanguage
     ) {
-        NavHost(
-            navController = navController,
-            startDestination = ROUTE_HOME,
-            enterTransition = { fadeIn(animationSpec = tween(150)) },
-            exitTransition = { fadeOut(animationSpec = tween(110)) },
-            popEnterTransition = { fadeIn(animationSpec = tween(150)) },
-            popExitTransition = { fadeOut(animationSpec = tween(110)) },
-            modifier = Modifier.fillMaxSize()
-        ) {
-            composable(ROUTE_HOME) {
-                HomeScreen(
-                    profile = profile,
-                    activeZone = activeZone,
-                    categories = categories,
-                    products = allProducts,
-                    recentlyViewed = recentlyViewed,
-                    recentOrders = (ordersState as? UiState.Success)?.data.orEmpty(),
-                    isRefreshing = isRefreshing,
-                    onRefresh = viewModel::triggerRefresh,
-                    onOpenSearch = { navigateTo(ROUTE_SEARCH) },
-                    onOpenAllCategories = { navigateTo(ROUTE_CATEGORIES) },
-                    onExploreBulkDeals = {
-                        viewModel.setBulkOnly(true)
-                        navigateTo(ROUTE_SEARCH)
-                    },
-                    onSelectCategory = { catId ->
-                        viewModel.selectCategory(catId)
-                        navigateTo(ROUTE_SEARCH)
-                    },
-                    onOpenProductDetail = ::openProduct,
-                    onQuickAdd = { prod ->
-                        val moq = PricingEngine.resolveMoqUnits(prod, profile)
-                        viewModel.addOrUpdateCart(prod.id, moq, PackMode.UNIT, s.addedToCart)
-                    },
-                    onReorder = { orderId ->
-                        viewModel.reorder(orderId, s.addedToCart) { navigateTo(ROUTE_CART) }
-                    },
-                    onOpenAllCatalog = {
-                        viewModel.selectCategory(null)
-                        navigateTo(ROUTE_SEARCH)
-                    },
-                    onOpenOrders = { navigateTo(ROUTE_ACCOUNT) }
-                )
-            }
-
-            composable(ROUTE_CATEGORIES) {
-                CategoriesScreen(
-                    categories = categories,
-                    products = allProducts,
-                    selectedCategoryId = filters.selectedCategoryId,
-                    onSelectCategory = { catId ->
-                        viewModel.selectCategory(catId)
-                        navigateTo(ROUTE_SEARCH)
+        Box(modifier = Modifier.fillMaxSize()) {
+            if (showCheckout) {
+                CheckoutRoute(
+                    viewModel = viewModel,
+                    onBack = { showCheckout = false },
+                    onOrderCompleted = {
+                        showCheckout = false
+                        currentTabRoute = ROUTE_ACCOUNT
                     }
                 )
-            }
-
-            composable(ROUTE_SEARCH) {
-                SearchCatalogScreen(
-                    categories = categories,
-                    products = filteredProducts,
-                    filters = filters,
-                    recentSearches = recentSearches,
-                    profile = profile,
-                    isRefreshing = isRefreshing,
-                    onRefresh = viewModel::triggerRefresh,
-                    onSearchChange = viewModel::updateSearch,
-                    onCommitSearch = viewModel::commitRecentSearch,
-                    onClearRecentSearches = viewModel::clearRecentSearches,
-                    onSelectCategory = viewModel::selectCategory,
-                    onToggleBulkOnly = viewModel::toggleBulkOnly,
-                    onToggleInStockOnly = viewModel::toggleInStockOnly,
-                    onSelectSort = viewModel::setSortOption,
-                    onOpenProductDetail = ::openProduct,
-                    onQuickAdd = { prod ->
-                        val moq = PricingEngine.resolveMoqUnits(prod, profile)
-                        viewModel.addOrUpdateCart(prod.id, moq, PackMode.UNIT, s.addedToCart)
-                    },
-                    onResetFilters = {
-                        viewModel.updateSearch("")
-                        viewModel.selectCategory(null)
-                        viewModel.setBulkOnly(false)
+            } else {
+                tabStateHolder.SaveableStateProvider(key = currentTabRoute) {
+                    when (currentTabRoute) {
+                        ROUTE_HOME -> HomeTabRoute(
+                            viewModel = viewModel,
+                            onNavigateTab = navigateToTab,
+                            onOpenProductDetail = openProduct
+                        )
+                        ROUTE_CATEGORIES -> CategoriesTabRoute(
+                            viewModel = viewModel,
+                            onNavigateTab = navigateToTab
+                        )
+                        ROUTE_SEARCH -> SearchTabRoute(
+                            viewModel = viewModel,
+                            onOpenProductDetail = openProduct
+                        )
+                        ROUTE_CART -> CartTabRoute(
+                            viewModel = viewModel,
+                            onNavigateTab = navigateToTab,
+                            onOpenCheckout = { showCheckout = true }
+                        )
+                        ROUTE_ACCOUNT -> AccountTabRoute(
+                            viewModel = viewModel,
+                            onNavigateTab = navigateToTab,
+                            onSignOut = { signOut(credentialManager, scope) }
+                        )
                     }
-                )
-            }
-
-            composable(ROUTE_CART) {
-                CartScreen(
-                    summary = checkoutSummary,
-                    profile = profile,
-                    coupons = coupons,
-                    draft = draft,
-                    onBrowseCatalog = { navigateTo(ROUTE_SEARCH) },
-                    onUpdateCartQty = { prodId, qty, mode ->
-                        viewModel.addOrUpdateCart(prodId, qty, mode)
-                    },
-                    onApplyCoupon = viewModel::applyCoupon,
-                    onRemoveCoupon = viewModel::removeCoupon,
-                    onToggleLoyalty = viewModel::toggleRedeemLoyalty,
-                    onProceedToCheckout = { navController.navigate(ROUTE_CHECKOUT) }
-                )
-            }
-
-            composable(ROUTE_CHECKOUT) {
-                CheckoutScreen(
-                    summary = checkoutSummary,
-                    profile = profile,
-                    addresses = addresses,
-                    activeAddress = activeAddress,
-                    zones = zones,
-                    activeZone = activeZone,
-                    draft = draft,
-                    isSubmitting = isSubmitting,
-                    onSelectAddress = viewModel::selectAddress,
-                    onSaveNewAddress = viewModel::saveAddress,
-                    onSelectSlot = viewModel::selectDeliverySlot,
-                    onSelectPayment = viewModel::selectPaymentMethod,
-                    onPaymentRefChange = viewModel::updatePaymentReference,
-                    onPlaceOrder = {
-                        viewModel.placeOrder(s.orderPlacedSuccess) {
-                            navController.popBackStack(ROUTE_HOME, inclusive = false)
-                            navigateTo(ROUTE_ACCOUNT)
-                        }
-                    },
-                    onBack = { navController.popBackStack() }
-                )
-            }
-
-            composable(ROUTE_ACCOUNT) {
-                AccountScreen(
-                    isAdmin = viewModel.isAdmin,
-                    profile = profile,
-                    addresses = addresses,
-                    zones = zones,
-                    currentLanguage = currentLanguage,
-                    currentThemeMode = currentThemeMode,
-                    ordersState = ordersState,
-                    selectedOrderId = selectedOrderId,
-                    selectedOrderItems = selectedOrderItems,
-                    loyaltyLogs = loyaltyLogs,
-                    supportTickets = supportTickets,
-                    adminUsers = adminUsers,
-                    onSelectOrder = viewModel::selectOrder,
-                    onCancelOrder = viewModel::cancelOrder,
-                    onReorder = { orderId ->
-                        viewModel.reorder(orderId, s.addedToCart) { navigateTo(ROUTE_CART) }
-                    },
-                    onSaveAddress = viewModel::saveAddress,
-                    onDeleteAddress = viewModel::deleteAddress,
-                    onRequestSegment = { seg, comp, tax ->
-                        viewModel.requestSegmentSwitch(seg, comp, tax, s.saveBtn)
-                    },
-                    onSubmitTicket = { oid, cat, subj, msg ->
-                        viewModel.submitSupportTicket(oid, cat, subj, msg, s.submitTicket)
-                    },
-                    onSelectLanguage = viewModel::setLanguage,
-                    onSelectThemeMode = viewModel::setThemeMode,
-                    onSeedCatalog = viewModel::seedCatalog,
-                    onApproveUserTier = viewModel::approveUserTier,
-                    onAdvanceOrder = viewModel::advanceOrder,
-                    onStepDriver = viewModel::stepDriver,
-                    onToggleFulfillment = viewModel::toggleFulfillment,
-                    onResolveTicket = viewModel::resolveTicket,
-                    onCopyTrackingToast = { code ->
-                        viewModel.showMessage("${s.copyTracking}: $code")
-                    },
-                    onRetryOrders = viewModel::triggerRefresh,
-                    onSignOut = {
-                        signOut(credentialManager, scope)
-                    }
-                )
+                }
             }
         }
     }
 
     inspectedProduct?.let { prod ->
-        val related = remember(prod.id, allProducts) {
-            allProducts.filter { it.categoryId == prod.categoryId && it.id != prod.id }.take(6)
-        }
-        ProductDetailSheet(
+        InspectedProductSheetHost(
+            viewModel = viewModel,
             product = prod,
-            relatedProducts = related,
-            profile = profile,
             onDismiss = { inspectedProduct = null },
-            onSelectRelated = ::openProduct,
-            onAddToCart = { qty, mode ->
-                viewModel.addOrUpdateCart(prod.id, qty, mode, s.addedToCart)
-                inspectedProduct = null
-            }
+            onSelectRelated = openProduct
         )
     }
+}
+
+@Composable
+private fun HomeTabRoute(
+    viewModel: CommerceViewModel,
+    onNavigateTab: (String) -> Unit,
+    onOpenProductDetail: (Product) -> Unit
+) {
+    val s = LocalAppStrings.current
+    val profileState by viewModel.userProfileState.collectAsStateWithLifecycle()
+    val profile = (profileState as? UiState.Success)?.data
+    val activeZone by viewModel.activeZone.collectAsStateWithLifecycle()
+    val categories by viewModel.categories.collectAsStateWithLifecycle()
+    val allProducts by viewModel.products.collectAsStateWithLifecycle()
+    val recentlyViewed by viewModel.recentlyViewedProducts.collectAsStateWithLifecycle()
+    val ordersState by viewModel.ordersState.collectAsStateWithLifecycle()
+    val isRefreshing by viewModel.isRefreshing.collectAsStateWithLifecycle()
+
+    HomeScreen(
+        profile = profile,
+        activeZone = activeZone,
+        categories = categories,
+        products = allProducts,
+        recentlyViewed = recentlyViewed,
+        recentOrders = (ordersState as? UiState.Success)?.data.orEmpty(),
+        isRefreshing = isRefreshing,
+        onRefresh = viewModel::triggerRefresh,
+        onOpenSearch = { onNavigateTab(ROUTE_SEARCH) },
+        onOpenAllCategories = { onNavigateTab(ROUTE_CATEGORIES) },
+        onExploreBulkDeals = {
+            viewModel.setBulkOnly(true)
+            onNavigateTab(ROUTE_SEARCH)
+        },
+        onSelectCategory = { catId ->
+            viewModel.selectCategory(catId)
+            onNavigateTab(ROUTE_SEARCH)
+        },
+        onOpenProductDetail = onOpenProductDetail,
+        onQuickAdd = { prod ->
+            val moq = PricingEngine.resolveMoqUnits(prod, profile)
+            viewModel.addOrUpdateCart(prod.id, moq, PackMode.UNIT, s.addedToCart)
+        },
+        onReorder = { orderId ->
+            viewModel.reorder(orderId, s.addedToCart) { onNavigateTab(ROUTE_CART) }
+        },
+        onOpenAllCatalog = {
+            viewModel.selectCategory(null)
+            onNavigateTab(ROUTE_SEARCH)
+        },
+        onOpenOrders = { onNavigateTab(ROUTE_ACCOUNT) }
+    )
+}
+
+@Composable
+private fun CategoriesTabRoute(
+    viewModel: CommerceViewModel,
+    onNavigateTab: (String) -> Unit
+) {
+    val categories by viewModel.categories.collectAsStateWithLifecycle()
+    val allProducts by viewModel.products.collectAsStateWithLifecycle()
+    val filters by viewModel.filters.collectAsStateWithLifecycle()
+
+    CategoriesScreen(
+        categories = categories,
+        products = allProducts,
+        selectedCategoryId = filters.selectedCategoryId,
+        onSelectCategory = { catId ->
+            viewModel.selectCategory(catId)
+            onNavigateTab(ROUTE_SEARCH)
+        }
+    )
+}
+
+@Composable
+private fun SearchTabRoute(
+    viewModel: CommerceViewModel,
+    onOpenProductDetail: (Product) -> Unit
+) {
+    val s = LocalAppStrings.current
+    val categories by viewModel.categories.collectAsStateWithLifecycle()
+    val filteredProducts by viewModel.filteredProducts.collectAsStateWithLifecycle()
+    val filters by viewModel.filters.collectAsStateWithLifecycle()
+    val recentSearches by viewModel.recentSearches.collectAsStateWithLifecycle()
+    val profileState by viewModel.userProfileState.collectAsStateWithLifecycle()
+    val profile = (profileState as? UiState.Success)?.data
+    val isRefreshing by viewModel.isRefreshing.collectAsStateWithLifecycle()
+
+    SearchCatalogScreen(
+        categories = categories,
+        products = filteredProducts,
+        filters = filters,
+        recentSearches = recentSearches,
+        profile = profile,
+        isRefreshing = isRefreshing,
+        onRefresh = viewModel::triggerRefresh,
+        onSearchChange = viewModel::updateSearch,
+        onCommitSearch = viewModel::commitRecentSearch,
+        onClearRecentSearches = viewModel::clearRecentSearches,
+        onSelectCategory = viewModel::selectCategory,
+        onToggleBulkOnly = viewModel::toggleBulkOnly,
+        onToggleInStockOnly = viewModel::toggleInStockOnly,
+        onSelectSort = viewModel::setSortOption,
+        onOpenProductDetail = onOpenProductDetail,
+        onQuickAdd = { prod ->
+            val moq = PricingEngine.resolveMoqUnits(prod, profile)
+            viewModel.addOrUpdateCart(prod.id, moq, PackMode.UNIT, s.addedToCart)
+        },
+        onResetFilters = {
+            viewModel.updateSearch("")
+            viewModel.selectCategory(null)
+            viewModel.setBulkOnly(false)
+        }
+    )
+}
+
+@Composable
+private fun CartTabRoute(
+    viewModel: CommerceViewModel,
+    onNavigateTab: (String) -> Unit,
+    onOpenCheckout: () -> Unit
+) {
+    val checkoutSummary by viewModel.checkoutSummary.collectAsStateWithLifecycle()
+    val profileState by viewModel.userProfileState.collectAsStateWithLifecycle()
+    val profile = (profileState as? UiState.Success)?.data
+    val coupons by viewModel.coupons.collectAsStateWithLifecycle()
+    val draft by viewModel.checkoutDraft.collectAsStateWithLifecycle()
+
+    CartScreen(
+        summary = checkoutSummary,
+        profile = profile,
+        coupons = coupons,
+        draft = draft,
+        onBrowseCatalog = { onNavigateTab(ROUTE_SEARCH) },
+        onUpdateCartQty = { prodId, qty, mode ->
+            viewModel.addOrUpdateCart(prodId, qty, mode)
+        },
+        onApplyCoupon = viewModel::applyCoupon,
+        onRemoveCoupon = viewModel::removeCoupon,
+        onToggleLoyalty = viewModel::toggleRedeemLoyalty,
+        onProceedToCheckout = onOpenCheckout
+    )
+}
+
+@Composable
+private fun CheckoutRoute(
+    viewModel: CommerceViewModel,
+    onBack: () -> Unit,
+    onOrderCompleted: () -> Unit
+) {
+    val s = LocalAppStrings.current
+    val checkoutSummary by viewModel.checkoutSummary.collectAsStateWithLifecycle()
+    val profileState by viewModel.userProfileState.collectAsStateWithLifecycle()
+    val profile = (profileState as? UiState.Success)?.data
+    val addresses by viewModel.addresses.collectAsStateWithLifecycle()
+    val activeAddress by viewModel.activeAddress.collectAsStateWithLifecycle()
+    val zones by viewModel.zones.collectAsStateWithLifecycle()
+    val activeZone by viewModel.activeZone.collectAsStateWithLifecycle()
+    val draft by viewModel.checkoutDraft.collectAsStateWithLifecycle()
+    val isSubmitting by viewModel.isSubmittingOrder.collectAsStateWithLifecycle()
+
+    CheckoutScreen(
+        summary = checkoutSummary,
+        profile = profile,
+        addresses = addresses,
+        activeAddress = activeAddress,
+        zones = zones,
+        activeZone = activeZone,
+        draft = draft,
+        isSubmitting = isSubmitting,
+        onSelectAddress = viewModel::selectAddress,
+        onSaveNewAddress = viewModel::saveAddress,
+        onSelectSlot = viewModel::selectDeliverySlot,
+        onSelectPayment = viewModel::selectPaymentMethod,
+        onPaymentRefChange = viewModel::updatePaymentReference,
+        onPlaceOrder = {
+            viewModel.placeOrder(s.orderPlacedSuccess) {
+                onOrderCompleted()
+            }
+        },
+        onBack = onBack
+    )
+}
+
+@Composable
+private fun AccountTabRoute(
+    viewModel: CommerceViewModel,
+    onNavigateTab: (String) -> Unit,
+    onSignOut: () -> Unit
+) {
+    val s = LocalAppStrings.current
+    val profileState by viewModel.userProfileState.collectAsStateWithLifecycle()
+    val profile = (profileState as? UiState.Success)?.data
+    val addresses by viewModel.addresses.collectAsStateWithLifecycle()
+    val zones by viewModel.zones.collectAsStateWithLifecycle()
+    val currentLanguage by viewModel.language.collectAsStateWithLifecycle()
+    val currentThemeMode by viewModel.themeMode.collectAsStateWithLifecycle()
+    val ordersState by viewModel.ordersState.collectAsStateWithLifecycle()
+    val selectedOrderId by viewModel.selectedOrderId.collectAsStateWithLifecycle()
+    val selectedOrderItems by viewModel.selectedOrderItems.collectAsStateWithLifecycle()
+    val loyaltyLogs by viewModel.loyaltyLogs.collectAsStateWithLifecycle()
+    val supportTickets by viewModel.supportTickets.collectAsStateWithLifecycle()
+    val adminUsers by viewModel.adminUsers.collectAsStateWithLifecycle()
+
+    AccountScreen(
+        isAdmin = viewModel.isAdmin,
+        profile = profile,
+        addresses = addresses,
+        zones = zones,
+        currentLanguage = currentLanguage,
+        currentThemeMode = currentThemeMode,
+        ordersState = ordersState,
+        selectedOrderId = selectedOrderId,
+        selectedOrderItems = selectedOrderItems,
+        loyaltyLogs = loyaltyLogs,
+        supportTickets = supportTickets,
+        adminUsers = adminUsers,
+        onSelectOrder = viewModel::selectOrder,
+        onCancelOrder = viewModel::cancelOrder,
+        onReorder = { orderId ->
+            viewModel.reorder(orderId, s.addedToCart) { onNavigateTab(ROUTE_CART) }
+        },
+        onSaveAddress = viewModel::saveAddress,
+        onDeleteAddress = viewModel::deleteAddress,
+        onRequestSegment = { seg, comp, tax ->
+            viewModel.requestSegmentSwitch(seg, comp, tax, s.saveBtn)
+        },
+        onSubmitTicket = { oid, cat, subj, msg ->
+            viewModel.submitSupportTicket(oid, cat, subj, msg, s.submitTicket)
+        },
+        onSelectLanguage = viewModel::setLanguage,
+        onSelectThemeMode = viewModel::setThemeMode,
+        onSeedCatalog = viewModel::seedCatalog,
+        onApproveUserTier = viewModel::approveUserTier,
+        onAdvanceOrder = viewModel::advanceOrder,
+        onStepDriver = viewModel::stepDriver,
+        onToggleFulfillment = viewModel::toggleFulfillment,
+        onResolveTicket = viewModel::resolveTicket,
+        onCopyTrackingToast = { code ->
+            viewModel.showMessage("${s.copyTracking}: $code")
+        },
+        onRetryOrders = viewModel::triggerRefresh,
+        onSignOut = onSignOut
+    )
+}
+
+@Composable
+private fun InspectedProductSheetHost(
+    viewModel: CommerceViewModel,
+    product: Product,
+    onDismiss: () -> Unit,
+    onSelectRelated: (Product) -> Unit
+) {
+    val s = LocalAppStrings.current
+    val allProducts by viewModel.products.collectAsStateWithLifecycle()
+    val profileState by viewModel.userProfileState.collectAsStateWithLifecycle()
+    val profile = (profileState as? UiState.Success)?.data
+    val related = remember(product.id, allProducts) {
+        allProducts.filter { it.categoryId == product.categoryId && it.id != product.id }.take(6)
+    }
+
+    ProductDetailSheet(
+        product = product,
+        relatedProducts = related,
+        profile = profile,
+        onDismiss = onDismiss,
+        onSelectRelated = onSelectRelated,
+        onAddToCart = { qty, mode ->
+            viewModel.addOrUpdateCart(product.id, qty, mode, s.addedToCart)
+            onDismiss()
+        }
+    )
 }

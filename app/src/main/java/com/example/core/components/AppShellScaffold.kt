@@ -126,36 +126,36 @@ fun AppShellScaffold(
                                 ) {
                                     Surface(
                                         shape = shapes.smallComponent,
-                                        color = colors.primaryContainer,
-                                        border = BorderStroke(1.dp, colors.primary.copy(alpha = 0.22f))
+                                        color = colors.brandBanner,
+                                        border = BorderStroke(1.dp, colors.heroAccent.copy(alpha = 0.45f))
                                     ) {
                                         FastProductImage(
                                             drawableRes = R.drawable.ic_cleansupply_logo,
                                             contentDescription = s.appBrand,
+                                            targetSizePx = 128,
                                             modifier = Modifier
-                                                .size(34.dp)
+                                                .size(32.dp)
                                                 .clip(shapes.smallComponent)
                                         )
                                     }
-                                    Column(modifier = Modifier.weight(1f, fill = false)) {
-                                        Text(
-                                            text = s.appBrand,
-                                            style = type.titleMedium,
-                                            color = colors.textPrimary,
-                                            maxLines = 1,
-                                            overflow = TextOverflow.Ellipsis
-                                        )
-                                    }
+                                    Text(
+                                        text = s.appBrand,
+                                        style = type.titleMedium,
+                                        color = colors.textPrimary,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis,
+                                        modifier = Modifier.weight(1f, fill = false)
+                                    )
                                     if (!badgeLabel.isNullOrBlank()) {
                                         Surface(
-                                            color = colors.primaryContainer,
+                                            color = colors.secondaryContainer,
                                             shape = shapes.pill,
-                                            border = BorderStroke(0.8.dp, colors.primary.copy(alpha = 0.25f))
+                                            border = BorderStroke(0.8.dp, colors.secondary.copy(alpha = 0.65f))
                                         ) {
                                             Text(
                                                 text = badgeLabel,
                                                 style = type.labelSmall,
-                                                color = colors.onPrimaryContainer,
+                                                color = colors.onSecondaryContainer,
                                                 maxLines = 1,
                                                 softWrap = false,
                                                 modifier = Modifier.padding(horizontal = spacing.xs, vertical = 3.dp)
@@ -321,8 +321,8 @@ private fun NavItemIcon(
         BadgedBox(
             badge = {
                 Badge(
-                    containerColor = colors.primary,
-                    contentColor = colors.onPrimary
+                    containerColor = colors.interactive,
+                    contentColor = colors.onInteractive
                 ) {
                     Text(
                         text = if (cartBadgeCount > 99) "99+" else cartBadgeCount.toString(),
@@ -347,9 +347,9 @@ private fun CleanSupplySnackbar(data: SnackbarData) {
 
     Surface(
         shape = shapes.card,
-        color = colors.brandSlate,
-        contentColor = colors.onPrimary,
-        border = BorderStroke(1.dp, colors.heroAccent.copy(alpha = 0.35f)),
+        color = colors.brandBanner,
+        contentColor = colors.onBrandBanner,
+        border = BorderStroke(1.dp, colors.heroAccent.copy(alpha = 0.45f)),
         shadowElevation = CleanSupplyTheme.elevations.floating,
         modifier = Modifier
             .fillMaxWidth()
@@ -369,7 +369,7 @@ private fun CleanSupplySnackbar(data: SnackbarData) {
             Text(
                 text = data.visuals.message,
                 style = type.bodyMedium,
-                color = colors.onPrimary,
+                color = colors.onBrandBanner,
                 modifier = Modifier.weight(1f)
             )
         }

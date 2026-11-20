@@ -1,14 +1,21 @@
 package com.example
 
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
+import androidx.compose.ui.test.assertTextContains
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onFirst
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -18,8 +25,12 @@ import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.unit.LayoutDirection
 import com.example.core.components.ProductDetailSheet
 import com.example.core.designsystem.AppThemeMode
+import com.example.core.designsystem.ArabicCleanSupplyTypography
+import com.example.core.designsystem.ArabicSupplyFontFamily
 import com.example.core.designsystem.CleanSupplyTheme
 import com.example.core.designsystem.DarkCleanSupplyColors
+import com.example.core.designsystem.EnglishCleanSupplyTypography
+import com.example.core.designsystem.EnglishInterFontFamily
 import com.example.core.designsystem.LightCleanSupplyColors
 import com.example.data.firestore.SeedData
 import com.example.data.model.Address
@@ -32,8 +43,10 @@ import com.example.data.model.PaymentMethod
 import com.example.data.model.UserProfile
 import com.example.data.model.VerificationStatus
 import com.example.domain.PricingEngine
+import com.example.feature.account.AccountScreen
 import com.example.feature.account.AppearanceLanguageCard
 import com.example.feature.account.GuestAccountScreen
+import com.example.feature.account.GuestMainShell
 import com.example.feature.auth.AuthScreen
 import com.example.feature.cart.CartScreen
 import com.example.feature.cart.CheckoutScreen
@@ -516,5 +529,143 @@ class CleanSupplyUiTest {
         // Wholesale MOQ >= carton size starts in carton mode where 1 carton exceeds bulkMinQty or unlocks easily; verify B2B note is hidden
         composeRule.onNodeWithText(EnglishStrings.b2bUpgradePricingNote).assertDoesNotExist()
         composeRule.onNodeWithText(EnglishStrings.authorizedPricingTitle).performScrollTo().assertIsDisplayed()
+    }
+
+    @Test
+    fun `new visual identity tokens enforce forest green ivory palette and dark mode banner contrast`() {
+        assertEquals(Color(0xFF174C3C), LightCleanSupplyColors.primary)
+        assertEquals(Color(0xFF23845D), LightCleanSupplyColors.interactive)
+        assertEquals(Color(0xFFF7F6F1), LightCleanSupplyColors.background)
+        assertEquals(Color(0xFFFFFFFF), LightCleanSupplyColors.surface)
+        assertEquals(Color(0xFFD8C6A0), LightCleanSupplyColors.secondary)
+        assertEquals(Color(0xFFE8E7DF), LightCleanSupplyColors.outline)
+
+        // Dark mode banner ink must stay bright ivory over deep forest banner (never dark-on-dark)
+        assertEquals(Color(0xFF174C3C), DarkCleanSupplyColors.brandBanner)
+        assertEquals(Color(0xFFF9F8F3), DarkCleanSupplyColors.onBrandBanner)
+    }
+
+    @Test
+    fun `bilingual typography uses IBM Plex Sans Arabic and Inter with tabular numerals`() {
+        var resolvedArFont = EnglishInterFontFamily
+        var resolvedEnFont = ArabicSupplyFontFamily
+        var numericFeatures: String? = null
+
+        composeRule.setContent {
+            CleanSupplyTheme(language = AppLanguage.ARABIC, themeMode = AppThemeMode.LIGHT) {
+                resolvedArFont = CleanSupplyTheme.typography.titleLarge.fontFamily!!
+                numericFeatures = CleanSupplyTheme.typography.numericMedium.fontFeatureSettings
+            }
+            CleanSupplyTheme(language = AppLanguage.ENGLISH, themeMode = AppThemeMode.LIGHT) {
+                resolvedEnFont = CleanSupplyTheme.typography.titleLarge.fontFamily!!
+            }
+        }
+
+        assertEquals(ArabicSupplyFontFamily, resolvedArFont)
+        assertEquals(EnglishInterFontFamily, resolvedEnFont)
+        assertEquals("tnum", numericFeatures)
+        assertEquals(ArabicSupplyFontFamily, ArabicCleanSupplyTypography.bodyMedium.fontFamily)
+        assertEquals(EnglishInterFontFamily, EnglishCleanSupplyTypography.bodyMedium.fontFamily)
+    }
+
+    @Test
+    fun `guest shell switches bottom tabs smoothly and preserves search query and cart state`() {
+        composeRule.setContent {
+            var cartItems by remember { mutableStateOf(emptyList<CartItem>()) }
+            CleanSupplyTheme(language = AppLanguage.ENGLISH, themeMode = AppThemeMode.LIGHT) {
+                GuestMainShell(
+                    guestCartItems = cartItems,
+                    currentLanguage = AppLanguage.ENGLISH,
+                    currentThemeMode = AppThemeMode.LIGHT,
+                    recentSearches = emptyList(),
+                    onUpdateGuestCart = { cartItems = it },
+                    onToggleLanguage = {},
+                    onSelectLanguage = {},
+                    onSelectThemeMode = {},
+                    onCommitRecentSearch = {},
+                    onClearRecentSearches = {},
+                    onExitGuestToAuth = {}
+                )
+            }
+        }
+
+        // Start on Home, add a product, navigate to Search -> enter query -> switch to Cart -> back to Search
+        composeRule.onNodeWithTag("home_search_entry").assertIsDisplayed()
+        composeRule.onNodeWithTag("nav_$ROUTE_SEARCH").performClick()
+        composeRule.onNodeWithTag("catalog_search_input").performTextInput("Gel")
+        composeRule.onNodeWithTag("product_card_${gelProduct.id}").assertIsDisplayed()
+        composeRule.onNodeWithTag("quick_add_${gelProduct.id}").performScrollTo().performClick()
+
+        // Navigate to Cart and verify line item & proceed button, then navigate to Checkout
+        composeRule.onNodeWithTag("nav_$ROUTE_CART").performClick()
+        composeRule.onNodeWithTag("proceed_to_checkout_btn").assertIsEnabled().performClick()
+        composeRule.onNodeWithTag("place_order_button").assertIsDisplayed()
+
+        // Navigate back from Checkout to Cart, then switch to Categories and back to Search
+        composeRule.onNodeWithContentDescription(EnglishStrings.backLabel).performClick()
+        composeRule.onNodeWithTag("proceed_to_checkout_btn").assertIsDisplayed()
+        composeRule.onNodeWithTag("nav_$ROUTE_CATEGORIES").performClick()
+        composeRule.onNodeWithTag("category_grid_card_all").assertIsDisplayed()
+        composeRule.onNodeWithTag("nav_$ROUTE_SEARCH").performClick()
+        composeRule.onNodeWithTag("catalog_search_input").assertTextContains("Gel")
+    }
+
+    @Test
+    fun `account screen renders loyalty wallet and B2B credit meter in dark mode`() {
+        val wholesaleProfile = UserProfile(
+            userId = "u_wh",
+            displayName = "Delta Cleaning Co.",
+            email = "orders@deltaclean.eg",
+            segment = CustomerSegment.WHOLESALE.name,
+            verificationStatus = VerificationStatus.VERIFIED.name,
+            loyaltyPoints = 420L,
+            creditLimit = 25000.0,
+            creditUsed = 5500.0
+        )
+
+        composeRule.setContent {
+            CleanSupplyTheme(language = AppLanguage.ENGLISH, themeMode = AppThemeMode.DARK) {
+                AccountScreen(
+                    isAdmin = false,
+                    profile = wholesaleProfile,
+                    addresses = emptyList(),
+                    zones = SeedData.defaultZones,
+                    currentLanguage = AppLanguage.ENGLISH,
+                    currentThemeMode = AppThemeMode.DARK,
+                    ordersState = UiState.Success(emptyList()),
+                    selectedOrderId = null,
+                    selectedOrderItems = emptyList(),
+                    loyaltyLogs = emptyList(),
+                    supportTickets = emptyList(),
+                    adminUsers = emptyList(),
+                    onSelectOrder = {},
+                    onCancelOrder = {},
+                    onReorder = {},
+                    onSaveAddress = { _, _, _, _, _, _ -> },
+                    onDeleteAddress = {},
+                    onRequestSegment = { _, _, _ -> },
+                    onSubmitTicket = { _, _, _, _ -> },
+                    onSelectLanguage = {},
+                    onSelectThemeMode = {},
+                    onSeedCatalog = {},
+                    onApproveUserTier = { _, _, _, _ -> },
+                    onAdvanceOrder = {},
+                    onStepDriver = {},
+                    onToggleFulfillment = {},
+                    onResolveTicket = { _, _ -> },
+                    onCopyTrackingToast = {},
+                    onSignOut = {}
+                )
+            }
+        }
+
+        // Switch to Loyalty & Help tab
+        composeRule.onNodeWithTag("account_tab_1").performClick()
+        composeRule.onNodeWithText(EnglishStrings.loyaltyPointsTitle).assertIsDisplayed()
+        composeRule.onNodeWithText("420 pts").assertIsDisplayed()
+
+        // Switch to Profile & Settings tab and verify B2B credit meter
+        composeRule.onNodeWithTag("account_tab_2").performClick()
+        composeRule.onNodeWithText(EnglishStrings.creditUtilizationLabel).assertIsDisplayed()
     }
 }

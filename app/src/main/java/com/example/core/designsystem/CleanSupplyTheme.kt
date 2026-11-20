@@ -66,6 +66,7 @@ fun CleanSupplyTheme(
     content: @Composable () -> Unit
 ) {
     val tokens = if (darkTheme) DarkCleanSupplyColors else LightCleanSupplyColors
+    val typeScale = if (language == AppLanguage.ARABIC) ArabicCleanSupplyTypography else EnglishCleanSupplyTypography
     val m3ColorScheme = if (darkTheme) {
         darkColorScheme(
             primary = tokens.primary,
@@ -77,7 +78,7 @@ fun CleanSupplyTheme(
             secondaryContainer = tokens.secondaryContainer,
             onSecondaryContainer = tokens.onSecondaryContainer,
             tertiary = tokens.warning,
-            onTertiary = tokens.brandSlate,
+            onTertiary = tokens.brandBanner,
             tertiaryContainer = tokens.warningContainer,
             onTertiaryContainer = tokens.warning,
             background = tokens.background,
@@ -129,14 +130,14 @@ fun CleanSupplyTheme(
         LocalLayoutDirection provides layoutDirection,
         LocalAppStrings provides strings,
         LocalCleanSupplyColors provides tokens,
-        LocalCleanSupplyTypography provides CleanSupplyTypeScale,
+        LocalCleanSupplyTypography provides typeScale,
         LocalCleanSupplySpacing provides CleanSupplySpacing,
         LocalCleanSupplyShapes provides CleanSupplyShapes,
         LocalCleanSupplyElevations provides CleanSupplyElevations
     ) {
         MaterialTheme(
             colorScheme = m3ColorScheme,
-            typography = CleanSupplyTypeScale.toMaterialTypography(),
+            typography = typeScale.toMaterialTypography(),
             shapes = CleanSupplyShapes.toMaterialShapes(),
             content = content
         )

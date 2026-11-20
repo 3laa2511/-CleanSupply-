@@ -96,13 +96,14 @@ fun ProductGridCard(
                 FastProductImage(
                     drawableRes = drawableRes,
                     contentDescription = product.localizedName(s.isArabic),
+                    targetSizePx = 560,
                     modifier = Modifier.fillMaxSize()
                 )
                 if (product.bulkDiscountPercent > 0L) {
                     Surface(
                         color = colors.discountContainer,
                         shape = shapes.pill,
-                        border = BorderStroke(0.8.dp, colors.discount.copy(alpha = 0.28f)),
+                        border = BorderStroke(0.8.dp, colors.discount.copy(alpha = 0.25f)),
                         modifier = Modifier
                             .align(Alignment.TopStart)
                             .padding(spacing.xs)
@@ -130,7 +131,7 @@ fun ProductGridCard(
                 }
                 if (product.cartonSize > 1L) {
                     Surface(
-                        color = colors.brandSlate.copy(alpha = 0.90f),
+                        color = colors.brandBanner.copy(alpha = 0.92f),
                         shape = shapes.pill,
                         modifier = Modifier
                             .align(Alignment.TopEnd)
@@ -139,7 +140,7 @@ fun ProductGridCard(
                         Text(
                             text = "${product.cartonSize}x",
                             style = type.numericSmall,
-                            color = colors.onPrimary,
+                            color = colors.onBrandBanner,
                             maxLines = 1,
                             modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
                         )
@@ -154,26 +155,21 @@ fun ProductGridCard(
                     top = spacing.xxs,
                     bottom = spacing.sm
                 ),
-                verticalArrangement = Arrangement.spacedBy(spacing.xs)
+                verticalArrangement = Arrangement.spacedBy(6.dp)
             ) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Surface(
-                        color = colors.primaryContainer.copy(alpha = 0.65f),
-                        shape = shapes.smallComponent
-                    ) {
-                        Text(
-                            text = product.brand,
-                            style = type.labelSmall,
-                            color = colors.onPrimaryContainer,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                        )
-                    }
+                    Text(
+                        text = product.brand,
+                        style = type.labelSmall,
+                        color = colors.primary,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f)
+                    )
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(spacing.xxs)
@@ -256,8 +252,8 @@ fun ProductGridCard(
                     enabled = inStock,
                     shape = shapes.button,
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = colors.primary,
-                        contentColor = colors.onPrimary,
+                        containerColor = colors.interactive,
+                        contentColor = colors.onInteractive,
                         disabledContainerColor = colors.disabledContainer,
                         disabledContentColor = colors.disabled
                     ),
@@ -335,13 +331,14 @@ fun ProductListRowCard(
         ) {
             Box(
                 modifier = Modifier
-                    .size(92.dp)
+                    .size(88.dp)
                     .clip(shapes.smallComponent)
                     .background(colors.surfaceVariant)
             ) {
                 FastProductImage(
                     drawableRes = drawableRes,
                     contentDescription = product.localizedName(s.isArabic),
+                    targetSizePx = 360,
                     modifier = Modifier.fillMaxSize()
                 )
                 if (product.bulkDiscountPercent > 0L) {
@@ -364,7 +361,7 @@ fun ProductListRowCard(
 
             Column(
                 modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(spacing.xxs)
+                verticalArrangement = Arrangement.spacedBy(3.dp)
             ) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
@@ -429,8 +426,8 @@ fun ProductListRowCard(
                 enabled = inStock,
                 shape = shapes.button,
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = colors.primary,
-                    contentColor = colors.onPrimary,
+                    containerColor = colors.interactive,
+                    contentColor = colors.onInteractive,
                     disabledContainerColor = colors.disabledContainer,
                     disabledContentColor = colors.disabled
                 ),

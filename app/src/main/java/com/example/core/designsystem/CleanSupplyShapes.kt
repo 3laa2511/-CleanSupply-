@@ -9,27 +9,27 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
 /**
- * Refined, restrained shape & subtle elevation tokens (preferring surface contrast over heavy shadows).
+ * Calm architectural corner radii and restrained elevations preferring crisp hairline borders on warm ivory.
  */
 @Immutable
 data class CleanSupplyShapeTokens(
     val smallComponent: CornerBasedShape = RoundedCornerShape(8.dp),
     val chip: CornerBasedShape = RoundedCornerShape(10.dp),
-    val button: CornerBasedShape = RoundedCornerShape(12.dp),
+    val button: CornerBasedShape = RoundedCornerShape(10.dp),
     val input: CornerBasedShape = RoundedCornerShape(12.dp),
     val card: CornerBasedShape = RoundedCornerShape(14.dp),
-    val largeSurface: CornerBasedShape = RoundedCornerShape(18.dp),
-    val dialog: CornerBasedShape = RoundedCornerShape(20.dp),
-    val bottomSheet: CornerBasedShape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
+    val largeSurface: CornerBasedShape = RoundedCornerShape(16.dp),
+    val dialog: CornerBasedShape = RoundedCornerShape(18.dp),
+    val bottomSheet: CornerBasedShape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp),
     val pill: CornerBasedShape = RoundedCornerShape(50)
 )
 
 @Immutable
 data class CleanSupplyElevationTokens(
     val none: Dp = 0.dp,
-    val subtle: Dp = 1.dp,
-    val card: Dp = 2.dp,
-    val floating: Dp = 4.dp
+    val subtle: Dp = 0.dp,
+    val card: Dp = 1.dp,
+    val floating: Dp = 3.dp
 )
 
 val CleanSupplyShapes = CleanSupplyShapeTokens()

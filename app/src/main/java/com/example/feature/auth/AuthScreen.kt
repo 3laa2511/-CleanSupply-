@@ -208,7 +208,7 @@ fun BrandedLaunchSplash(
                 .fillMaxSize()
                 .background(
                     Brush.verticalGradient(
-                        listOf(colors.brandSlate, colors.brandSlateSurface)
+                        listOf(colors.brandBanner, colors.brandBannerSurface)
                     )
                 ),
             contentAlignment = Alignment.Center
@@ -220,22 +220,23 @@ fun BrandedLaunchSplash(
             ) {
                 Surface(
                     shape = shapes.largeSurface,
-                    color = colors.surface.copy(alpha = 0.10f),
-                    border = BorderStroke(1.dp, colors.heroAccent.copy(alpha = 0.40f))
+                    color = colors.onBrandBanner.copy(alpha = 0.12f),
+                    border = BorderStroke(1.dp, colors.heroAccent.copy(alpha = 0.45f))
                 ) {
                     FastProductImage(
                         drawableRes = R.drawable.ic_cleansupply_logo,
                         contentDescription = s.appBrand,
+                        targetSizePx = 256,
                         modifier = Modifier
                             .size(80.dp)
                             .clip(shapes.largeSurface)
                     )
                 }
-                Text(s.appBrand, style = type.headlineMedium, color = colors.onPrimary)
+                Text(s.appBrand, style = type.headlineMedium, color = colors.onBrandBanner)
                 Text(
                     text = s.appTagline,
                     style = type.bodySmall,
-                    color = colors.onPrimary.copy(alpha = 0.80f),
+                    color = colors.onBrandBanner.copy(alpha = 0.82f),
                     textAlign = TextAlign.Center
                 )
             }
@@ -275,7 +276,7 @@ fun AuthScreen(
     }
 
     val logoScale by animateFloatAsState(
-        targetValue = if (entered) 1f else 0.92f,
+        targetValue = if (entered) 1f else 0.94f,
         animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
         label = "authLogoScale"
     )
@@ -294,7 +295,7 @@ fun AuthScreen(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(spacing.md)
         ) {
-            // Top bar with Brand Logo & Language Toggle
+            // Compact Top Bar with Forest Logo & Language Pill
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -312,14 +313,15 @@ fun AuthScreen(
                 ) {
                     Surface(
                         shape = shapes.button,
-                        border = BorderStroke(1.dp, colors.primary.copy(alpha = 0.25f)),
-                        color = colors.primaryContainer
+                        border = BorderStroke(1.dp, colors.heroAccent.copy(alpha = 0.50f)),
+                        color = colors.brandBanner
                     ) {
                         FastProductImage(
                             drawableRes = R.drawable.ic_cleansupply_logo,
                             contentDescription = s.appBrand,
+                            targetSizePx = 160,
                             modifier = Modifier
-                                .size(44.dp)
+                                .size(42.dp)
                                 .clip(shapes.button)
                         )
                     }
@@ -347,16 +349,16 @@ fun AuthScreen(
                     ),
                     contentPadding = PaddingValues(horizontal = spacing.sm, vertical = 0.dp),
                     modifier = Modifier
-                        .height(spacing.minTouchTarget)
+                        .height(42.dp)
                         .testTag("auth_language_toggle")
                 ) {
-                    Icon(CleanSupplyIcons.Language, contentDescription = null, tint = colors.primary, modifier = Modifier.size(18.dp))
-                    Spacer(Modifier.width(spacing.xs))
+                    Icon(CleanSupplyIcons.Language, contentDescription = null, tint = colors.primary, modifier = Modifier.size(16.dp))
+                    Spacer(Modifier.width(6.dp))
                     Text(s.switchLangLabel, style = type.labelMedium)
                 }
             }
 
-            // Editorial Welcome & Authentication Card
+            // Editorial Welcome & Authentication Card (Balanced so primary CTAs stay above the fold)
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -373,12 +375,13 @@ fun AuthScreen(
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(152.dp)
+                            .height(132.dp)
                             .clip(shapes.card)
                     ) {
                         FastProductImage(
                             drawableRes = R.drawable.img_hero_cleansupply,
                             contentDescription = s.appBrand,
+                            targetSizePx = 800,
                             modifier = Modifier.fillMaxSize()
                         )
                         Box(
@@ -386,23 +389,23 @@ fun AuthScreen(
                                 .fillMaxSize()
                                 .background(
                                     Brush.verticalGradient(
-                                        listOf(Color.Transparent, colors.scrim.copy(alpha = 0.78f))
+                                        listOf(Color.Transparent, colors.brandBannerSurface.copy(alpha = 0.88f))
                                     )
                                 )
                         )
                         Column(
                             modifier = Modifier
                                 .align(Alignment.BottomStart)
-                                .padding(spacing.md),
-                            verticalArrangement = Arrangement.spacedBy(spacing.xs)
+                                .padding(spacing.sm),
+                            verticalArrangement = Arrangement.spacedBy(4.dp)
                         ) {
                             Surface(
-                                color = colors.brandSlate.copy(alpha = 0.90f),
-                                border = BorderStroke(1.dp, colors.heroAccent.copy(alpha = 0.45f)),
+                                color = colors.brandBanner.copy(alpha = 0.92f),
+                                border = BorderStroke(1.dp, colors.heroAccent.copy(alpha = 0.55f)),
                                 shape = shapes.pill
                             ) {
                                 Row(
-                                    modifier = Modifier.padding(horizontal = spacing.sm, vertical = 5.dp),
+                                    modifier = Modifier.padding(horizontal = spacing.sm, vertical = 4.dp),
                                     verticalAlignment = Alignment.CenterVertically,
                                     horizontalArrangement = Arrangement.spacedBy(spacing.xxs)
                                 ) {
@@ -415,19 +418,19 @@ fun AuthScreen(
                                     Text(
                                         text = s.heroBadge,
                                         style = type.labelSmall,
-                                        color = colors.onPrimary
+                                        color = colors.onBrandBanner
                                     )
                                 }
                             }
                             Text(
                                 text = s.appTagline,
                                 style = type.titleSmall,
-                                color = colors.onPrimary
+                                color = colors.onBrandBanner
                             )
                         }
                     }
 
-                    Column(verticalArrangement = Arrangement.spacedBy(spacing.xs)) {
+                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                         Text(
                             text = s.signInTitle,
                             style = type.headlineSmall,
@@ -440,55 +443,7 @@ fun AuthScreen(
                         )
                     }
 
-                    Surface(
-                        color = colors.surfaceVariant,
-                        shape = shapes.card,
-                        border = BorderStroke(1.dp, colors.outline)
-                    ) {
-                        Column(
-                            modifier = Modifier.padding(spacing.md),
-                            verticalArrangement = Arrangement.spacedBy(spacing.sm)
-                        ) {
-                            AuthValuePropRow(
-                                icon = CleanSupplyIcons.Store,
-                                label = if (s.isArabic) "تجزئة + جملة + تعاقدات شركات" else "Retail + Wholesale + Institutional Pricing"
-                            )
-                            HorizontalDivider(color = colors.outline)
-                            AuthValuePropRow(
-                                icon = CleanSupplyIcons.Shipping,
-                                label = if (s.isArabic) "أسطول الشركة + شركات الشحن المعتمدة" else "Company Fleet + Authorized Freight Carriers"
-                            )
-                            HorizontalDivider(color = colors.outline)
-                            AuthValuePropRow(
-                                icon = CleanSupplyIcons.Loyalty,
-                                label = if (s.isArabic) "نقاط ولاء، كوبونات، وفاتورة آجلة" else "Loyalty Rewards, Coupons & B2B Credit"
-                            )
-                        }
-                    }
-
-                    if (errorMessage != null) {
-                        Surface(
-                            color = colors.errorContainer,
-                            shape = shapes.button,
-                            border = BorderStroke(1.dp, colors.error.copy(alpha = 0.28f)),
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Row(
-                                modifier = Modifier.padding(spacing.sm),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(spacing.xs)
-                            ) {
-                                Icon(CleanSupplyIcons.Error, contentDescription = null, tint = colors.error, modifier = Modifier.size(18.dp))
-                                Text(
-                                    text = errorMessage.orEmpty(),
-                                    style = type.bodySmall,
-                                    color = colors.error
-                                )
-                            }
-                        }
-                    }
-
-                    Column(verticalArrangement = Arrangement.spacedBy(spacing.sm)) {
+                    Column(verticalArrangement = Arrangement.spacedBy(spacing.xs)) {
                         CleanSupplyPrimaryButton(
                             text = s.signInWithGoogle,
                             isLoading = isLoading,
@@ -525,6 +480,54 @@ fun AuthScreen(
                         )
                     }
 
+                    if (errorMessage != null) {
+                        Surface(
+                            color = colors.errorContainer,
+                            shape = shapes.button,
+                            border = BorderStroke(1.dp, colors.error.copy(alpha = 0.28f)),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(spacing.sm),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(spacing.xs)
+                            ) {
+                                Icon(CleanSupplyIcons.Error, contentDescription = null, tint = colors.error, modifier = Modifier.size(18.dp))
+                                Text(
+                                    text = errorMessage.orEmpty(),
+                                    style = type.bodySmall,
+                                    color = colors.error
+                                )
+                            }
+                        }
+                    }
+
+                    Surface(
+                        color = colors.surfaceVariant,
+                        shape = shapes.card,
+                        border = BorderStroke(1.dp, colors.outline)
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(horizontal = spacing.md, vertical = spacing.sm),
+                            verticalArrangement = Arrangement.spacedBy(spacing.xs)
+                        ) {
+                            AuthValuePropRow(
+                                icon = CleanSupplyIcons.Store,
+                                label = if (s.isArabic) "تجزئة + جملة + تعاقدات شركات" else "Retail + Wholesale + Institutional Pricing"
+                            )
+                            HorizontalDivider(color = colors.outline)
+                            AuthValuePropRow(
+                                icon = CleanSupplyIcons.Shipping,
+                                label = if (s.isArabic) "أسطول الشركة + شركات الشحن المعتمدة" else "Company Fleet + Authorized Freight Carriers"
+                            )
+                            HorizontalDivider(color = colors.outline)
+                            AuthValuePropRow(
+                                icon = CleanSupplyIcons.Loyalty,
+                                label = if (s.isArabic) "نقاط ولاء، كوبونات، وفاتورة آجلة" else "Loyalty Rewards, Coupons & B2B Credit"
+                            )
+                        }
+                    }
+
                     Text(
                         text = s.signInNote,
                         style = type.caption,
@@ -548,15 +551,15 @@ private fun AuthValuePropRow(icon: ImageVector, label: String) {
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(spacing.sm)) {
         Box(
             modifier = Modifier
-                .size(36.dp)
+                .size(32.dp)
                 .background(colors.primaryContainer, shapes.smallComponent),
             contentAlignment = Alignment.Center
         ) {
-            Icon(icon, contentDescription = null, tint = colors.primary, modifier = Modifier.size(18.dp))
+            Icon(icon, contentDescription = null, tint = colors.primary, modifier = Modifier.size(17.dp))
         }
         Text(
             text = label,
-            style = type.bodyMedium,
+            style = type.bodySmall,
             color = colors.textPrimary
         )
     }

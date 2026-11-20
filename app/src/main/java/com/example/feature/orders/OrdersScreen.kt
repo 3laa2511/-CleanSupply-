@@ -124,9 +124,9 @@ fun OrdersListTab(
                             horizontalArrangement = Arrangement.spacedBy(spacing.xs)
                         ) {
                             Surface(
-                                color = colors.primaryContainer.copy(alpha = 0.65f),
+                                color = colors.primaryContainer,
                                 shape = shapes.card,
-                                border = BorderStroke(1.dp, colors.primary.copy(alpha = 0.20f)),
+                                border = BorderStroke(1.dp, colors.primary.copy(alpha = 0.22f)),
                                 modifier = Modifier.weight(1f)
                             ) {
                                 Row(

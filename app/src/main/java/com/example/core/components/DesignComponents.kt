@@ -47,6 +47,7 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
+import coil.request.CachePolicy
 import coil.request.ImageRequest
 import com.example.core.designsystem.CleanSupplyIcons
 import com.example.core.designsystem.CleanSupplyTheme
@@ -61,14 +62,17 @@ fun FastProductImage(
     @DrawableRes drawableRes: Int,
     contentDescription: String,
     modifier: Modifier = Modifier,
-    contentScale: ContentScale = ContentScale.Crop
+    contentScale: ContentScale = ContentScale.Crop,
+    targetSizePx: Int = 640
 ) {
     val colors = CleanSupplyTheme.colors
     val context = LocalContext.current
-    val request = remember(drawableRes) {
+    val request = remember(context, drawableRes, targetSizePx) {
         ImageRequest.Builder(context)
             .data(drawableRes)
-            .crossfade(160)
+            .size(targetSizePx)
+            .memoryCachePolicy(CachePolicy.ENABLED)
+            .crossfade(false)
             .build()
     }
     AsyncImage(
@@ -87,8 +91,8 @@ fun CleanSupplyPrimaryButton(
     enabled: Boolean = true,
     isLoading: Boolean = false,
     icon: ImageVector? = null,
-    containerColor: Color = CleanSupplyTheme.colors.primary,
-    contentColor: Color = CleanSupplyTheme.colors.onPrimary,
+    containerColor: Color = CleanSupplyTheme.colors.interactive,
+    contentColor: Color = CleanSupplyTheme.colors.onInteractive,
     testTag: String? = null
 ) {
     val colors = CleanSupplyTheme.colors
@@ -99,7 +103,7 @@ fun CleanSupplyPrimaryButton(
     val interactionSource = remember { MutableInteractionSource() }
     val pressed by interactionSource.collectIsPressedAsState()
     val scale by animateFloatAsState(
-        targetValue = if (pressed && enabled && !isLoading) 0.98f else 1f,
+        targetValue = if (pressed && enabled && !isLoading) 0.985f else 1f,
         animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
         label = "btnPressScale"
     )
@@ -117,7 +121,7 @@ fun CleanSupplyPrimaryButton(
         ),
         contentPadding = PaddingValues(horizontal = spacing.md, vertical = 0.dp),
         modifier = modifier
-            .height(50.dp)
+            .height(48.dp)
             .graphicsLayer {
                 scaleX = scale
                 scaleY = scale
@@ -229,13 +233,14 @@ fun CleanSupplySearchField(
             }
         },
         singleLine = true,
+        textStyle = type.bodyMedium,
         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
         keyboardActions = KeyboardActions(onSearch = { onSubmit() }),
         shape = shapes.input,
         colors = OutlinedTextFieldDefaults.colors(
             focusedContainerColor = colors.surface,
             unfocusedContainerColor = colors.surface,
-            focusedBorderColor = colors.primary,
+            focusedBorderColor = colors.interactive,
             unfocusedBorderColor = colors.outlineStrong,
             focusedTextColor = colors.textPrimary,
             unfocusedTextColor = colors.textPrimary
@@ -314,7 +319,7 @@ fun QuantityStepper(
                 Icon(
                     imageVector = CleanSupplyIcons.Add,
                     contentDescription = "Increase quantity",
-                    tint = if (canIncrement) colors.primary else colors.disabled
+                    tint = if (canIncrement) colors.interactive else colors.disabled
                 )
             }
         }
@@ -330,7 +335,6 @@ fun SectionHeader(
     modifier: Modifier = Modifier
 ) {
     val colors = CleanSupplyTheme.colors
-    val shapes = CleanSupplyTheme.shapes
     val type = CleanSupplyTheme.typography
     val spacing = CleanSupplyTheme.spacing
 
@@ -339,47 +343,39 @@ fun SectionHeader(
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Row(
+        Column(
             modifier = Modifier.weight(1f),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(spacing.xs)
+            verticalArrangement = Arrangement.spacedBy(2.dp)
         ) {
-            Box(
-                modifier = Modifier
-                    .width(4.dp)
-                    .height(if (subtitle.isNullOrBlank()) 20.dp else 32.dp)
-                    .background(colors.primary, shapes.pill)
+            Text(
+                text = title,
+                style = type.titleLarge,
+                color = colors.textPrimary,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
             )
-            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            if (!subtitle.isNullOrBlank()) {
                 Text(
-                    text = title,
-                    style = type.titleLarge,
-                    color = colors.textPrimary,
+                    text = subtitle,
+                    style = type.bodySmall,
+                    color = colors.textSecondary,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
-                if (!subtitle.isNullOrBlank()) {
-                    Text(
-                        text = subtitle,
-                        style = type.bodySmall,
-                        color = colors.textSecondary,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                }
             }
         }
         if (actionLabel != null && onAction != null) {
             TextButton(
                 onClick = onAction,
+                contentPadding = PaddingValues(horizontal = spacing.xs, vertical = 0.dp),
                 modifier = Modifier.height(spacing.minTouchTarget)
             ) {
-                Text(actionLabel, style = type.labelLarge, color = colors.primary)
+                Text(actionLabel, style = type.labelLarge, color = colors.interactive)
                 Spacer(Modifier.width(spacing.xxs))
                 Icon(
                     imageVector = CleanSupplyIcons.Forward,
                     contentDescription = null,
-                    tint = colors.primary,
+                    tint = colors.interactive,
                     modifier = Modifier.size(16.dp)
                 )
             }
@@ -412,10 +408,10 @@ fun SegmentVerificationBadge(profile: UserProfile?, modifier: Modifier = Modifie
         modifier = modifier,
         color = bg,
         shape = shapes.pill,
-        border = BorderStroke(1.dp, fg.copy(alpha = 0.24f))
+        border = BorderStroke(1.dp, fg.copy(alpha = 0.22f))
     ) {
         Row(
-            modifier = Modifier.padding(horizontal = spacing.sm, vertical = spacing.xxs),
+            modifier = Modifier.padding(horizontal = spacing.sm, vertical = 4.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(spacing.xxs)
         ) {
@@ -443,7 +439,7 @@ fun OrderStatusChip(status: OrderStatus, modifier: Modifier = Modifier) {
         OrderStatus.PLACED -> Triple(if (s.isArabic) "تم الاستلام" else "Placed", colors.infoContainer, colors.info)
         OrderStatus.CONFIRMED -> Triple(if (s.isArabic) "مؤكد" else "Confirmed", colors.primaryContainer, colors.onPrimaryContainer)
         OrderStatus.PACKED -> Triple(if (s.isArabic) "جاري التجهيز" else "Packed", colors.pendingContainer, colors.pending)
-        OrderStatus.OUT_FOR_DELIVERY -> Triple(if (s.isArabic) "في الطريق" else "Out for Delivery", colors.primary, colors.onPrimary)
+        OrderStatus.OUT_FOR_DELIVERY -> Triple(if (s.isArabic) "في الطريق" else "Out for Delivery", colors.interactive, colors.onInteractive)
         OrderStatus.DELIVERED -> Triple(if (s.isArabic) "تم التوصيل" else "Delivered", colors.successContainer, colors.success)
         OrderStatus.CANCELLED -> Triple(if (s.isArabic) "ملغي" else "Cancelled", colors.errorContainer, colors.error)
     }
@@ -452,10 +448,10 @@ fun OrderStatusChip(status: OrderStatus, modifier: Modifier = Modifier) {
         modifier = modifier,
         color = bg,
         shape = shapes.pill,
-        border = BorderStroke(1.dp, fg.copy(alpha = 0.22f))
+        border = BorderStroke(1.dp, fg.copy(alpha = 0.20f))
     ) {
         Row(
-            modifier = Modifier.padding(horizontal = spacing.sm, vertical = spacing.xxs),
+            modifier = Modifier.padding(horizontal = spacing.sm, vertical = 4.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(spacing.xxs)
         ) {

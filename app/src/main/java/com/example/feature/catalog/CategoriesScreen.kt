@@ -14,8 +14,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
+import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -26,8 +28,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -48,6 +48,7 @@ fun CategoriesScreen(
     selectedCategoryId: String?,
     isLoading: Boolean = false,
     onSelectCategory: (String?) -> Unit,
+    gridState: LazyGridState = rememberLazyGridState(),
     modifier: Modifier = Modifier
 ) {
     val s = LocalAppStrings.current
@@ -87,6 +88,7 @@ fun CategoriesScreen(
     }
 
     LazyVerticalGrid(
+        state = gridState,
         columns = GridCells.Adaptive(minSize = 160.dp),
         contentPadding = PaddingValues(spacing.md),
         verticalArrangement = Arrangement.spacedBy(spacing.gridGap),
@@ -101,7 +103,7 @@ fun CategoriesScreen(
             ) {
                 Column(
                     modifier = Modifier.weight(1f),
-                    verticalArrangement = Arrangement.spacedBy(spacing.xxs)
+                    verticalArrangement = Arrangement.spacedBy(2.dp)
                 ) {
                     Text(s.categoriesTitle, style = type.headlineSmall, color = colors.textPrimary)
                     Text(s.categoriesSubtitle, style = type.bodySmall, color = colors.textSecondary)
@@ -120,25 +122,23 @@ fun CategoriesScreen(
             }
         }
 
-        // All Products Banner Card
+        // All Products Forest Green Banner Card
         item(span = { GridItemSpan(maxLineSpan) }, key = "category_all_card") {
             val selected = selectedCategoryId == null
             Surface(
                 onClick = { onSelectCategory(null) },
                 shape = shapes.largeSurface,
-                color = colors.brandSlate,
+                color = colors.brandBanner,
                 border = BorderStroke(
                     width = if (selected) 2.dp else 1.dp,
-                    color = if (selected) colors.heroAccent else colors.outline
+                    color = if (selected) colors.heroAccent else colors.brandBannerSurface
                 ),
                 modifier = Modifier
                     .fillMaxWidth()
                     .testTag("category_grid_card_all")
             ) {
                 Row(
-                    modifier = Modifier
-                        .background(Brush.horizontalGradient(listOf(colors.brandSlate, colors.brandSlateSurface)))
-                        .padding(spacing.md),
+                    modifier = Modifier.padding(spacing.md),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -150,7 +150,7 @@ fun CategoriesScreen(
                         Box(
                             modifier = Modifier
                                 .size(44.dp)
-                                .background(colors.heroAccent.copy(alpha = 0.20f), shapes.button),
+                                .background(colors.heroAccent.copy(alpha = 0.22f), shapes.button),
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
@@ -164,12 +164,12 @@ fun CategoriesScreen(
                             Text(
                                 text = s.allCategories,
                                 style = type.titleMedium,
-                                color = colors.onPrimary
+                                color = colors.onBrandBanner
                             )
                             Text(
                                 text = "${s.allProductsDesc} • ${products.size} ${s.resultsCountLabel}",
                                 style = type.caption,
-                                color = colors.onPrimary.copy(alpha = 0.80f),
+                                color = colors.onBrandBanner.copy(alpha = 0.82f),
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
                             )
@@ -193,7 +193,7 @@ fun CategoriesScreen(
                 elevation = CardDefaults.cardElevation(defaultElevation = CleanSupplyTheme.elevations.subtle),
                 border = BorderStroke(
                     width = if (selected) 1.5.dp else 1.dp,
-                    color = if (selected) colors.primary else colors.outline
+                    color = if (selected) colors.interactive else colors.outline
                 ),
                 modifier = Modifier
                     .fillMaxWidth()
@@ -203,38 +203,31 @@ fun CategoriesScreen(
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(112.dp)
+                            .height(108.dp)
                             .padding(spacing.xs)
                             .clip(shapes.smallComponent)
+                            .background(colors.surfaceVariant)
                     ) {
                         FastProductImage(
                             drawableRes = Formatters.productDrawable(cat.iconKey),
                             contentDescription = cat.localizedName(s.isArabic),
+                            targetSizePx = 480,
                             modifier = Modifier.fillMaxSize()
                         )
-                        Box(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .background(
-                                    Brush.verticalGradient(
-                                        listOf(Color.Transparent, colors.scrim.copy(alpha = 0.50f))
-                                    )
-                                )
-                        )
                         Surface(
-                            color = if (selected) colors.primary else colors.surface.copy(alpha = 0.94f),
+                            color = if (selected) colors.interactive else colors.surface.copy(alpha = 0.94f),
                             shape = shapes.smallComponent,
                             modifier = Modifier
                                 .align(Alignment.TopStart)
                                 .padding(spacing.xs)
-                                .size(32.dp)
+                                .size(30.dp)
                         ) {
                             Box(contentAlignment = Alignment.Center) {
                                 Icon(
                                     imageVector = CleanSupplyIcons.categoryIcon(cat.iconKey),
                                     contentDescription = null,
-                                    tint = if (selected) colors.onPrimary else colors.primary,
-                                    modifier = Modifier.size(18.dp)
+                                    tint = if (selected) colors.onInteractive else colors.primary,
+                                    modifier = Modifier.size(17.dp)
                                 )
                             }
                         }

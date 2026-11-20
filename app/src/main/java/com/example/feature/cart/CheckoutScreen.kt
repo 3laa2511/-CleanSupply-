@@ -191,10 +191,10 @@ fun CheckoutScreen(
                                     Surface(
                                         onClick = { onSelectAddress(addr.id) },
                                         shape = shapes.button,
-                                        color = if (selected) colors.primaryContainer.copy(alpha = 0.55f) else colors.surfaceVariant,
+                                        color = if (selected) colors.primaryContainer else colors.surfaceVariant,
                                         border = BorderStroke(
                                             width = if (selected) 1.5.dp else 1.dp,
-                                            color = if (selected) colors.primary else colors.outline
+                                            color = if (selected) colors.interactive else colors.outline
                                         ),
                                         modifier = Modifier.fillMaxWidth()
                                     ) {
@@ -552,7 +552,7 @@ private fun StepProgressHeader(
                         modifier = Modifier
                             .size(24.dp)
                             .background(
-                                if (doneOrCurrent) colors.primary else colors.surfaceVariant,
+                                if (doneOrCurrent) colors.interactive else colors.surfaceVariant,
                                 CircleShape
                             ),
                         contentAlignment = Alignment.Center
@@ -560,7 +560,7 @@ private fun StepProgressHeader(
                         Text(
                             text = "${idx + 1}",
                             style = type.numericSmall,
-                            color = if (doneOrCurrent) colors.onPrimary else colors.textSecondary
+                            color = if (doneOrCurrent) colors.onInteractive else colors.textSecondary
                         )
                     }
                     Text(
@@ -594,10 +594,10 @@ private fun PaymentOptionRow(
     Surface(
         onClick = { if (enabled) onClick() },
         shape = shapes.button,
-        color = if (selected) colors.primaryContainer.copy(alpha = 0.55f) else colors.surfaceVariant.copy(alpha = 0.6f),
+        color = if (selected) colors.primaryContainer else colors.surfaceVariant.copy(alpha = 0.65f),
         border = BorderStroke(
             width = if (selected) 1.5.dp else 1.dp,
-            color = if (selected) colors.primary else colors.outline
+            color = if (selected) colors.interactive else colors.outline
         ),
         modifier = Modifier
             .fillMaxWidth()
@@ -612,7 +612,7 @@ private fun PaymentOptionRow(
                 selected = selected,
                 onClick = if (enabled) onClick else null,
                 enabled = enabled,
-                colors = RadioButtonDefaults.colors(selectedColor = colors.primary)
+                colors = RadioButtonDefaults.colors(selectedColor = colors.interactive)
             )
             Icon(
                 imageVector = icon,
@@ -718,7 +718,7 @@ fun AddAddressDialog(
                     }
                 },
                 shape = shapes.button,
-                colors = ButtonDefaults.buttonColors(containerColor = colors.primary, contentColor = colors.onPrimary)
+                colors = ButtonDefaults.buttonColors(containerColor = colors.interactive, contentColor = colors.onInteractive)
             ) {
                 Text(s.saveBtn, style = type.labelLarge)
             }

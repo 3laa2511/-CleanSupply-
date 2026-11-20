@@ -1,10 +1,5 @@
 package com.example.feature.catalog
 
-import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -19,11 +14,15 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -80,6 +79,8 @@ fun SearchCatalogScreen(
     onOpenProductDetail: (Product) -> Unit,
     onQuickAdd: (Product) -> Unit,
     onResetFilters: () -> Unit = {},
+    gridState: LazyGridState = rememberLazyGridState(),
+    listState: LazyListState = rememberLazyListState(),
     modifier: Modifier = Modifier
 ) {
     val s = LocalAppStrings.current
@@ -124,55 +125,47 @@ fun SearchCatalogScreen(
             testTag = "catalog_search_input"
         )
 
-        // Recent searches & Suggestions when query is empty
+        // Compact Recent Searches / Suggestions Row (keeps products prominent in top viewport)
         if (filters.searchQuery.isBlank() && (recentSearches.isNotEmpty() || suggestions.isNotEmpty())) {
-            Column(
-                modifier = Modifier.padding(top = spacing.xs),
-                verticalArrangement = Arrangement.spacedBy(spacing.xs)
+            val activeTerms = if (recentSearches.isNotEmpty()) recentSearches else suggestions
+            val isRecent = recentSearches.isNotEmpty()
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = spacing.xs),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(spacing.xs)
             ) {
-                if (recentSearches.isNotEmpty()) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
+                LazyRow(
+                    modifier = Modifier.weight(1f),
+                    horizontalArrangement = Arrangement.spacedBy(spacing.xs)
+                ) {
+                    items(activeTerms, key = { (if (isRecent) "recent_" else "sug_") + it }) { term ->
+                        FilterChip(
+                            selected = false,
+                            onClick = {
+                                onSearchChange(term)
+                                if (!isRecent) onCommitSearch(term)
+                            },
+                            shape = shapes.pill,
+                            colors = chipColors,
+                            leadingIcon = {
+                                Icon(
+                                    imageVector = if (isRecent) CleanSupplyIcons.History else CleanSupplyIcons.Search,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(14.dp)
+                                )
+                            },
+                            label = { Text(term, style = type.labelSmall) }
+                        )
+                    }
+                }
+                if (isRecent) {
+                    TextButton(
+                        onClick = onClearRecentSearches,
+                        contentPadding = PaddingValues(horizontal = spacing.xs)
                     ) {
-                        Text(s.recentSearchesTitle, style = type.labelMedium, color = colors.textSecondary)
-                        TextButton(onClick = onClearRecentSearches) {
-                            Text(s.clearAll, style = type.labelSmall, color = colors.primary)
-                        }
-                    }
-                    LazyRow(horizontalArrangement = Arrangement.spacedBy(spacing.xs)) {
-                        items(recentSearches, key = { "recent_$it" }) { term ->
-                            FilterChip(
-                                selected = false,
-                                onClick = { onSearchChange(term) },
-                                shape = shapes.pill,
-                                colors = chipColors,
-                                leadingIcon = {
-                                    Icon(CleanSupplyIcons.History, contentDescription = null, modifier = Modifier.size(15.dp))
-                                },
-                                label = { Text(term, style = type.labelMedium) }
-                            )
-                        }
-                    }
-                } else {
-                    Text(s.suggestionsTitle, style = type.labelMedium, color = colors.textSecondary)
-                    LazyRow(horizontalArrangement = Arrangement.spacedBy(spacing.xs)) {
-                        items(suggestions, key = { "sug_$it" }) { term ->
-                            FilterChip(
-                                selected = false,
-                                onClick = {
-                                    onSearchChange(term)
-                                    onCommitSearch(term)
-                                },
-                                shape = shapes.pill,
-                                colors = chipColors,
-                                leadingIcon = {
-                                    Icon(CleanSupplyIcons.Search, contentDescription = null, modifier = Modifier.size(15.dp))
-                                },
-                                label = { Text(term, style = type.labelMedium) }
-                            )
-                        }
+                        Text(s.clearAll, style = type.labelSmall, color = colors.primary)
                     }
                 }
             }
@@ -190,7 +183,7 @@ fun SearchCatalogScreen(
                     shape = shapes.pill,
                     colors = chipColors,
                     leadingIcon = {
-                        Icon(CleanSupplyIcons.AllCategories, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Icon(CleanSupplyIcons.AllCategories, contentDescription = null, modifier = Modifier.size(15.dp))
                     },
                     label = { Text(s.allCategories, style = type.labelMedium) },
                     modifier = Modifier.testTag("cat_chip_all")
@@ -203,7 +196,7 @@ fun SearchCatalogScreen(
                     shape = shapes.pill,
                     colors = chipColors,
                     leadingIcon = {
-                        Icon(CleanSupplyIcons.categoryIcon(cat.iconKey), contentDescription = null, modifier = Modifier.size(16.dp))
+                        Icon(CleanSupplyIcons.categoryIcon(cat.iconKey), contentDescription = null, modifier = Modifier.size(15.dp))
                     },
                     label = { Text(cat.localizedName(s.isArabic), style = type.labelMedium) },
                     modifier = Modifier.testTag("cat_chip_${cat.id}")
@@ -211,7 +204,7 @@ fun SearchCatalogScreen(
             }
         }
 
-        // Bulk, Availability, Count, Sort & Grid/List Bar
+        // Bulk, Availability, Count, Sort & Instant Grid/List Toggle Bar
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -236,7 +229,7 @@ fun SearchCatalogScreen(
                             selectedLeadingIconColor = colors.discount
                         ),
                         leadingIcon = {
-                            Icon(CleanSupplyIcons.BulkDeal, contentDescription = null, modifier = Modifier.size(15.dp))
+                            Icon(CleanSupplyIcons.BulkDeal, contentDescription = null, modifier = Modifier.size(14.dp))
                         },
                         label = { Text(s.bulkOnlyFilter, style = type.labelSmall) },
                         modifier = Modifier.testTag("bulk_filter_chip")
@@ -249,7 +242,7 @@ fun SearchCatalogScreen(
                         shape = shapes.pill,
                         colors = chipColors,
                         leadingIcon = {
-                            Icon(CleanSupplyIcons.Check, contentDescription = null, modifier = Modifier.size(15.dp))
+                            Icon(CleanSupplyIcons.Check, contentDescription = null, modifier = Modifier.size(14.dp))
                         },
                         label = { Text(s.inStockOnlyFilter, style = type.labelSmall) },
                         modifier = Modifier.testTag("in_stock_filter_chip")
@@ -288,7 +281,7 @@ fun SearchCatalogScreen(
                             .height(spacing.minTouchTarget)
                             .testTag("sort_button")
                     ) {
-                        Icon(CleanSupplyIcons.Sort, contentDescription = null, tint = colors.primary, modifier = Modifier.size(18.dp))
+                        Icon(CleanSupplyIcons.Sort, contentDescription = null, tint = colors.primary, modifier = Modifier.size(17.dp))
                         Spacer(Modifier.width(spacing.xxs))
                         Text(
                             text = when (filters.sortOption) {
@@ -370,52 +363,46 @@ fun SearchCatalogScreen(
                     } else null,
                     actionTestTag = "search_reset_filters_btn"
                 )
+            } else if (isGridView) {
+                LazyVerticalGrid(
+                    state = gridState,
+                    columns = GridCells.Adaptive(minSize = 166.dp),
+                    contentPadding = PaddingValues(bottom = spacing.xl),
+                    verticalArrangement = Arrangement.spacedBy(spacing.gridGap),
+                    horizontalArrangement = Arrangement.spacedBy(spacing.gridGap),
+                    modifier = Modifier.fillMaxSize()
+                ) {
+                    items(
+                        items = products,
+                        key = { it.id },
+                        contentType = { "product_grid" }
+                    ) { prod ->
+                        ProductGridCard(
+                            product = prod,
+                            profile = profile,
+                            onCardClick = { onOpenProductDetail(prod) },
+                            onQuickAdd = { onQuickAdd(prod) }
+                        )
+                    }
+                }
             } else {
-                AnimatedContent(
-                    targetState = isGridView,
-                    transitionSpec = { fadeIn(tween(150)) togetherWith fadeOut(tween(100)) },
-                    label = "catalogViewSwitch"
-                ) { grid ->
-                    if (grid) {
-                        LazyVerticalGrid(
-                            columns = GridCells.Adaptive(minSize = 166.dp),
-                            contentPadding = PaddingValues(bottom = spacing.xl),
-                            verticalArrangement = Arrangement.spacedBy(spacing.gridGap),
-                            horizontalArrangement = Arrangement.spacedBy(spacing.gridGap),
-                            modifier = Modifier.fillMaxSize()
-                        ) {
-                            items(
-                                items = products,
-                                key = { it.id },
-                                contentType = { "product_grid" }
-                            ) { prod ->
-                                ProductGridCard(
-                                    product = prod,
-                                    profile = profile,
-                                    onCardClick = { onOpenProductDetail(prod) },
-                                    onQuickAdd = { onQuickAdd(prod) }
-                                )
-                            }
-                        }
-                    } else {
-                        LazyColumn(
-                            contentPadding = PaddingValues(bottom = spacing.xl),
-                            verticalArrangement = Arrangement.spacedBy(spacing.listGap),
-                            modifier = Modifier.fillMaxSize()
-                        ) {
-                            items(
-                                items = products,
-                                key = { it.id },
-                                contentType = { "product_row" }
-                            ) { prod ->
-                                ProductListRowCard(
-                                    product = prod,
-                                    profile = profile,
-                                    onCardClick = { onOpenProductDetail(prod) },
-                                    onQuickAdd = { onQuickAdd(prod) }
-                                )
-                            }
-                        }
+                LazyColumn(
+                    state = listState,
+                    contentPadding = PaddingValues(bottom = spacing.xl),
+                    verticalArrangement = Arrangement.spacedBy(spacing.listGap),
+                    modifier = Modifier.fillMaxSize()
+                ) {
+                    items(
+                        items = products,
+                        key = { it.id },
+                        contentType = { "product_row" }
+                    ) { prod ->
+                        ProductListRowCard(
+                            product = prod,
+                            profile = profile,
+                            onCardClick = { onOpenProductDetail(prod) },
+                            onQuickAdd = { onQuickAdd(prod) }
+                        )
                     }
                 }
             }

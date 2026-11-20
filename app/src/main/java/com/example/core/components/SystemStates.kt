@@ -343,8 +343,8 @@ fun CleanSupplyConfirmationDialog(
                 onClick = onConfirm,
                 shape = shapes.button,
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = if (isDestructive) colors.error else colors.primary,
-                    contentColor = if (isDestructive) colors.onError else colors.onPrimary
+                    containerColor = if (isDestructive) colors.error else colors.interactive,
+                    contentColor = if (isDestructive) colors.onError else colors.onInteractive
                 )
             ) {
                 Text(confirmText, style = type.labelLarge)

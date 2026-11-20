@@ -62,7 +62,7 @@ fun OperationsConsoleTab(
         item(key = "ops_header") {
             Card(
                 shape = shapes.largeSurface,
-                colors = CardDefaults.cardColors(containerColor = colors.brandSlate)
+                colors = CardDefaults.cardColors(containerColor = colors.brandBanner)
             ) {
                 Column(
                     modifier = Modifier.padding(spacing.md),
@@ -73,7 +73,7 @@ fun OperationsConsoleTab(
                         horizontalArrangement = Arrangement.spacedBy(spacing.xs)
                     ) {
                         Icon(CleanSupplyIcons.Admin, contentDescription = null, tint = colors.heroAccent)
-                        Text(s.opsConsoleTitle, style = type.titleMedium, color = colors.onPrimary)
+                        Text(s.opsConsoleTitle, style = type.titleMedium, color = colors.onBrandBanner)
                     }
                     CleanSupplyPrimaryButton(
                         text = s.seedCatalogBtn,

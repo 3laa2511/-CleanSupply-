@@ -109,15 +109,15 @@ fun OrderLifecycleTimeline(
                         }
                         Surface(
                             shape = CircleShape,
-                            color = if (active) colors.primary else colors.surface,
-                            border = if (isCurrent) BorderStroke(2.5.dp, colors.primaryContainer) else BorderStroke(1.dp, if (active) colors.primary else colors.outlineStrong),
+                            color = if (active) colors.interactive else colors.surface,
+                            border = if (isCurrent) BorderStroke(2.5.dp, colors.primaryContainer) else BorderStroke(1.dp, if (active) colors.interactive else colors.outlineStrong),
                             modifier = Modifier.size(30.dp)
                         ) {
                             Box(contentAlignment = Alignment.Center) {
                                 Icon(
                                     imageVector = if (active) CleanSupplyIcons.Check else CleanSupplyIcons.Schedule,
                                     contentDescription = label,
-                                    tint = if (active) colors.onPrimary else colors.textMuted,
+                                    tint = if (active) colors.onInteractive else colors.textMuted,
                                     modifier = Modifier.size(16.dp)
                                 )
                             }

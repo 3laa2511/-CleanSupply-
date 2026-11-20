@@ -179,7 +179,7 @@ fun CartScreen(
                             Icon(
                                 imageVector = if (summary.shippingFee == 0.0) CleanSupplyIcons.Check else CleanSupplyIcons.Shipping,
                                 contentDescription = null,
-                                tint = if (summary.shippingFee == 0.0) colors.success else colors.primary,
+                                tint = if (summary.shippingFee == 0.0) colors.success else colors.interactive,
                                 modifier = Modifier.size(18.dp)
                             )
                             Text(
@@ -190,7 +190,7 @@ fun CartScreen(
                         }
                         LinearProgressIndicator(
                             progress = { shippingProgress },
-                            color = if (summary.shippingFee == 0.0) colors.success else colors.primary,
+                            color = if (summary.shippingFee == 0.0) colors.success else colors.interactive,
                             trackColor = colors.primaryContainer,
                             strokeCap = StrokeCap.Round,
                             modifier = Modifier
@@ -234,8 +234,8 @@ fun CartScreen(
                                 singleLine = true,
                                 shape = shapes.input,
                                 colors = OutlinedTextFieldDefaults.colors(
-                                    focusedBorderColor = colors.primary,
-                                    unfocusedBorderColor = colors.outline,
+                                    focusedBorderColor = colors.interactive,
+                                    unfocusedBorderColor = colors.outlineStrong,
                                     focusedTextColor = colors.textPrimary,
                                     unfocusedTextColor = colors.textPrimary
                                 ),
@@ -250,14 +250,14 @@ fun CartScreen(
                                         couponInput = ""
                                         onRemoveCoupon()
                                     },
-                                    modifier = Modifier.height(52.dp)
+                                    modifier = Modifier.height(50.dp)
                                 )
                             } else {
                                 CleanSupplyPrimaryButton(
                                     text = s.applyCoupon,
                                     onClick = { onApplyCoupon(couponInput) },
                                     testTag = "apply_coupon_btn",
-                                    modifier = Modifier.height(52.dp)
+                                    modifier = Modifier.height(50.dp)
                                 )
                             }
                         }
@@ -302,7 +302,7 @@ fun CartScreen(
                                 Box(
                                     modifier = Modifier
                                         .size(38.dp)
-                                        .background(colors.warningContainer, shapes.button),
+                                        .background(colors.secondaryContainer, shapes.button),
                                     contentAlignment = Alignment.Center
                                 ) {
                                     Icon(CleanSupplyIcons.Loyalty, contentDescription = null, tint = colors.warning, modifier = Modifier.size(19.dp))
@@ -321,8 +321,8 @@ fun CartScreen(
                                 enabled = (profile?.loyaltyPoints ?: 0L) >= 10L,
                                 onCheckedChange = onToggleLoyalty,
                                 colors = SwitchDefaults.colors(
-                                    checkedThumbColor = colors.onPrimary,
-                                    checkedTrackColor = colors.primary
+                                    checkedThumbColor = colors.onInteractive,
+                                    checkedTrackColor = colors.interactive
                                 ),
                                 modifier = Modifier.testTag("loyalty_redeem_switch")
                             )

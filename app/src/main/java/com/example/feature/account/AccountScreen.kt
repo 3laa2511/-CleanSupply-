@@ -154,7 +154,7 @@ fun AccountScreen(
                             color = if (selected) colors.primaryContainer else colors.surfaceVariant,
                             border = BorderStroke(
                                 width = if (selected) 1.5.dp else 1.dp,
-                                color = if (selected) colors.primary else colors.outline
+                                color = if (selected) colors.interactive else colors.outline
                             ),
                             modifier = Modifier
                                 .height(spacing.minTouchTarget)
@@ -278,7 +278,7 @@ private fun LoyaltySupportTab(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clip(shapes.largeSurface)
-                    .background(Brush.linearGradient(listOf(colors.brandSlate, colors.brandSlateSurface)))
+                    .background(Brush.linearGradient(listOf(colors.brandBanner, colors.brandBannerSurface)))
             ) {
                 Row(
                     modifier = Modifier
@@ -288,11 +288,11 @@ private fun LoyaltySupportTab(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Column(verticalArrangement = Arrangement.spacedBy(spacing.xxs)) {
-                        Text(s.loyaltyPointsTitle, style = type.labelMedium, color = colors.primaryContainer)
+                        Text(s.loyaltyPointsTitle, style = type.labelMedium, color = colors.heroAccent)
                         Text(
                             text = "${profile?.loyaltyPoints ?: 0L} ${s.pointsUnit}",
                             style = type.displaySmall,
-                            color = colors.onPrimary
+                            color = colors.onBrandBanner
                         )
                         Surface(
                             color = colors.heroAccent.copy(alpha = 0.22f),
@@ -301,22 +301,22 @@ private fun LoyaltySupportTab(
                             Text(
                                 text = Formatters.money((profile?.loyaltyPoints ?: 0L) / 10.0, s.currency),
                                 style = type.numericSmall,
-                                color = colors.onPrimary,
+                                color = colors.onBrandBanner,
                                 modifier = Modifier.padding(horizontal = spacing.sm, vertical = 4.dp)
                             )
                         }
                     }
                     Box(
                         modifier = Modifier
-                            .size(58.dp)
-                            .background(colors.warning.copy(alpha = 0.20f), shapes.card),
+                            .size(56.dp)
+                            .background(colors.heroAccent.copy(alpha = 0.20f), shapes.card),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
                             imageVector = CleanSupplyIcons.Loyalty,
                             contentDescription = null,
-                            tint = colors.warning,
-                            modifier = Modifier.size(32.dp)
+                            tint = colors.heroAccent,
+                            modifier = Modifier.size(30.dp)
                         )
                     }
                 }
@@ -583,7 +583,7 @@ private fun ProfileSettingsTab(
                                 }
                                 LinearProgressIndicator(
                                     progress = { ratio },
-                                    color = colors.primary,
+                                    color = colors.interactive,
                                     trackColor = colors.surface,
                                     strokeCap = StrokeCap.Round,
                                     modifier = Modifier

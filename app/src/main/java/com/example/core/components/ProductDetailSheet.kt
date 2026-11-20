@@ -8,7 +8,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -39,8 +38,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.style.TextDecoration
@@ -128,63 +125,54 @@ fun ProductDetailSheet(
                     .padding(horizontal = spacing.lg, vertical = spacing.xs),
                 verticalArrangement = Arrangement.spacedBy(spacing.md)
             ) {
-                // Hero Photo with gradient scrim and SKU/Stock chips
+                // Clean Hero Photo without dark scrim obscuring details
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(216.dp)
+                        .height(210.dp)
                         .clip(shapes.largeSurface)
                         .background(colors.surfaceVariant)
                 ) {
                     FastProductImage(
                         drawableRes = Formatters.productDrawable(product.imageKey),
                         contentDescription = product.localizedName(s.isArabic),
+                        targetSizePx = 800,
                         modifier = Modifier.fillMaxSize()
                     )
-                    Box(
+                    Surface(
+                        color = if (product.stockQty > 0L) colors.successContainer else colors.outOfStockContainer,
+                        shape = shapes.pill,
+                        border = BorderStroke(
+                            0.8.dp,
+                            (if (product.stockQty > 0L) colors.success else colors.outOfStock).copy(alpha = 0.25f)
+                        ),
                         modifier = Modifier
-                            .fillMaxSize()
-                            .background(
-                                Brush.verticalGradient(
-                                    colors = listOf(Color.Transparent, colors.scrim.copy(alpha = 0.72f))
-                                )
-                            )
-                    )
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .align(Alignment.BottomStart)
-                            .padding(spacing.sm),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
+                            .align(Alignment.TopEnd)
+                            .padding(spacing.sm)
                     ) {
-                        Surface(
-                            color = colors.brandSlate.copy(alpha = 0.92f),
-                            shape = shapes.pill
-                        ) {
-                            Text(
-                                text = "${product.brand} • ${product.sku}",
-                                style = type.labelSmall,
-                                color = colors.onPrimary,
-                                modifier = Modifier.padding(horizontal = spacing.sm, vertical = 5.dp)
-                            )
-                        }
-                        Surface(
-                            color = if (product.stockQty > 0L) colors.successContainer else colors.outOfStockContainer,
-                            shape = shapes.pill
-                        ) {
-                            Text(
-                                text = if (product.stockQty > 0L) "${s.stockAvailable}: ${product.stockQty}" else s.outOfStock,
-                                style = type.labelSmall,
-                                color = if (product.stockQty > 0L) colors.success else colors.outOfStock,
-                                modifier = Modifier.padding(horizontal = spacing.sm, vertical = 5.dp)
-                            )
-                        }
+                        Text(
+                            text = if (product.stockQty > 0L) "${s.stockAvailable}: ${product.stockQty}" else s.outOfStock,
+                            style = type.labelSmall,
+                            color = if (product.stockQty > 0L) colors.success else colors.outOfStock,
+                            modifier = Modifier.padding(horizontal = spacing.sm, vertical = 5.dp)
+                        )
                     }
                 }
 
-                // Product Title & Description
+                // Eyebrow + Product Title & Description
                 Column(verticalArrangement = Arrangement.spacedBy(spacing.xs)) {
+                    Surface(
+                        color = colors.surfaceVariant,
+                        shape = shapes.pill,
+                        border = BorderStroke(1.dp, colors.outline)
+                    ) {
+                        Text(
+                            text = "${product.brand} • ${product.sku}",
+                            style = type.labelSmall,
+                            color = colors.primary,
+                            modifier = Modifier.padding(horizontal = spacing.sm, vertical = 4.dp)
+                        )
+                    }
                     Text(
                         text = product.localizedName(s.isArabic),
                         style = type.headlineSmall,
@@ -395,6 +383,7 @@ fun ProductDetailSheet(
                                         FastProductImage(
                                             drawableRes = Formatters.productDrawable(rel.imageKey),
                                             contentDescription = rel.localizedName(s.isArabic),
+                                            targetSizePx = 320,
                                             modifier = Modifier
                                                 .fillMaxWidth()
                                                 .height(74.dp)
@@ -449,14 +438,14 @@ fun ProductDetailSheet(
                     enabled = product.stockQty >= effectiveUnits,
                     shape = shapes.button,
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = colors.primary,
-                        contentColor = colors.onPrimary,
+                        containerColor = colors.interactive,
+                        contentColor = colors.onInteractive,
                         disabledContainerColor = colors.disabledContainer,
                         disabledContentColor = colors.disabled
                     ),
                     modifier = Modifier
                         .weight(1f)
-                        .height(52.dp)
+                        .height(50.dp)
                         .testTag("detail_add_to_cart")
                 ) {
                     Text(
@@ -516,7 +505,7 @@ private fun PackOptionCard(
         modifier = modifier.clickable(onClick = onClick),
         shape = shapes.button,
         color = if (selected) colors.primaryContainer else colors.surface,
-        border = BorderStroke(if (selected) 1.5.dp else 1.dp, if (selected) colors.primary else colors.outline)
+        border = BorderStroke(if (selected) 1.5.dp else 1.dp, if (selected) colors.interactive else colors.outline)
     ) {
         Row(
             modifier = Modifier.padding(horizontal = spacing.sm, vertical = spacing.sm),
@@ -555,7 +544,7 @@ private fun PackOptionCard(
                 )
             }
             if (selected) {
-                Icon(CleanSupplyIcons.Check, contentDescription = null, tint = colors.primary, modifier = Modifier.size(18.dp))
+                Icon(CleanSupplyIcons.Check, contentDescription = null, tint = colors.interactive, modifier = Modifier.size(18.dp))
             }
         }
     }
