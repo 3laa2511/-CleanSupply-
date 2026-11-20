@@ -89,6 +89,7 @@ fun OrderLifecycleTimeline(
         ) {
             steps.forEachIndexed { idx, (_, label) ->
                 val active = idx <= currentIdx
+                val isCurrent = idx == currentIdx
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     modifier = Modifier.weight(1f)
@@ -100,29 +101,31 @@ fun OrderLifecycleTimeline(
                         if (idx > 0) {
                             HorizontalDivider(
                                 modifier = Modifier.weight(1f),
-                                thickness = 2.dp,
+                                thickness = 2.5.dp,
                                 color = if (active) colors.primary else colors.outline
                             )
                         } else {
                             Spacer(Modifier.weight(1f))
                         }
-                        Box(
-                            modifier = Modifier
-                                .size(28.dp)
-                                .background(if (active) colors.primary else colors.surface, CircleShape),
-                            contentAlignment = Alignment.Center
+                        Surface(
+                            shape = CircleShape,
+                            color = if (active) colors.primary else colors.surface,
+                            border = if (isCurrent) BorderStroke(2.5.dp, colors.primaryContainer) else BorderStroke(1.dp, if (active) colors.primary else colors.outlineStrong),
+                            modifier = Modifier.size(30.dp)
                         ) {
-                            Icon(
-                                imageVector = CleanSupplyIcons.Check,
-                                contentDescription = label,
-                                tint = if (active) colors.onPrimary else colors.textMuted,
-                                modifier = Modifier.size(16.dp)
-                            )
+                            Box(contentAlignment = Alignment.Center) {
+                                Icon(
+                                    imageVector = if (active) CleanSupplyIcons.Check else CleanSupplyIcons.Schedule,
+                                    contentDescription = label,
+                                    tint = if (active) colors.onPrimary else colors.textMuted,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            }
                         }
                         if (idx < steps.lastIndex) {
                             HorizontalDivider(
                                 modifier = Modifier.weight(1f),
-                                thickness = 2.dp,
+                                thickness = 2.5.dp,
                                 color = if (idx < currentIdx) colors.primary else colors.outline
                             )
                         } else {
@@ -132,7 +135,7 @@ fun OrderLifecycleTimeline(
                     Spacer(Modifier.height(6.dp))
                     Text(
                         text = label,
-                        style = type.labelSmall,
+                        style = if (isCurrent) type.labelMedium else type.labelSmall,
                         color = if (active) colors.primary else colors.textSecondary,
                         maxLines = 1
                     )
@@ -172,33 +175,56 @@ fun OrderShipmentRecordCard(
             verticalArrangement = Arrangement.spacedBy(spacing.xs)
         ) {
             Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(spacing.xs)
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Icon(CleanSupplyIcons.Shipping, contentDescription = null, tint = colors.primary, modifier = Modifier.size(18.dp))
-                Text(s.shipmentDetailsTitle, style = type.titleSmall, color = colors.textPrimary)
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(spacing.xs)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(30.dp)
+                            .background(colors.primaryContainer, shapes.smallComponent),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(CleanSupplyIcons.Shipping, contentDescription = null, tint = colors.primary, modifier = Modifier.size(17.dp))
+                    }
+                    Text(s.shipmentDetailsTitle, style = type.titleSmall, color = colors.textPrimary)
+                }
+                if (createdLabel.isNotBlank()) {
+                    Text(createdLabel, style = type.caption, color = colors.textSecondary)
+                }
             }
 
-            if (createdLabel.isNotBlank()) {
-                Text(createdLabel, style = type.caption, color = colors.textSecondary)
-            }
-
-            Text(
-                text = if (fulfillment == FulfillmentType.INTERNAL_FLEET) {
-                    s.internalFleetLabel
-                } else {
-                    s.thirdPartyCarrierLabel
-                },
-                style = type.bodyMedium,
-                color = colors.textPrimary
-            )
-
-            if (order.carrierName.isNotBlank()) {
-                Text(
-                    text = order.carrierName,
-                    style = type.bodySmall,
-                    color = colors.textSecondary
-                )
+            Surface(
+                color = colors.surface,
+                shape = shapes.smallComponent,
+                border = BorderStroke(1.dp, colors.outline),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(
+                    modifier = Modifier.padding(spacing.sm),
+                    verticalArrangement = Arrangement.spacedBy(spacing.xxs)
+                ) {
+                    Text(
+                        text = if (fulfillment == FulfillmentType.INTERNAL_FLEET) {
+                            s.internalFleetLabel
+                        } else {
+                            s.thirdPartyCarrierLabel
+                        },
+                        style = type.labelLarge,
+                        color = colors.textPrimary
+                    )
+                    if (order.carrierName.isNotBlank()) {
+                        Text(
+                            text = order.carrierName,
+                            style = type.bodySmall,
+                            color = colors.textSecondary
+                        )
+                    }
+                }
             }
 
             if (order.deliveryAddress.isNotBlank()) {
@@ -206,7 +232,7 @@ fun OrderShipmentRecordCard(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(spacing.xs)
                 ) {
-                    Icon(CleanSupplyIcons.Location, contentDescription = null, tint = colors.textSecondary, modifier = Modifier.size(16.dp))
+                    Icon(CleanSupplyIcons.Location, contentDescription = null, tint = colors.primary, modifier = Modifier.size(16.dp))
                     Text(order.deliveryAddress, style = type.bodySmall, color = colors.textSecondary)
                 }
             }
@@ -222,7 +248,10 @@ fun OrderShipmentRecordCard(
                         Text(s.carrierTrackingTitle, style = type.caption, color = colors.textSecondary)
                         Text(order.trackingNumber, style = type.numericSmall, color = colors.textPrimary)
                     }
-                    IconButton(onClick = { onCopyTracking(order.trackingNumber) }) {
+                    IconButton(
+                        onClick = { onCopyTracking(order.trackingNumber) },
+                        modifier = Modifier.size(spacing.minTouchTarget)
+                    ) {
                         Icon(CleanSupplyIcons.Copy, contentDescription = s.copyTracking, tint = colors.primary)
                     }
                 }

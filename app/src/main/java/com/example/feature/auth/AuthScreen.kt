@@ -45,6 +45,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
@@ -83,7 +85,13 @@ fun attemptAutoSignIn(
     onUnauthenticated: () -> Unit,
     scope: CoroutineScope
 ) {
-    if (Firebase.auth.currentUser != null) {
+    val auth = try {
+        Firebase.auth
+    } catch (_: IllegalStateException) {
+        onUnauthenticated()
+        return
+    }
+    if (auth.currentUser != null) {
         onAuthSuccess()
         return
     }
@@ -198,28 +206,38 @@ fun BrandedLaunchSplash(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(colors.brandSlate),
+                .background(
+                    Brush.verticalGradient(
+                        listOf(colors.brandSlate, colors.brandSlateSurface)
+                    )
+                ),
             contentAlignment = Alignment.Center
         ) {
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(spacing.md)
+                verticalArrangement = Arrangement.spacedBy(spacing.md),
+                modifier = Modifier.padding(spacing.xl)
             ) {
                 Surface(
                     shape = shapes.largeSurface,
-                    color = colors.surface.copy(alpha = 0.08f),
-                    border = BorderStroke(1.dp, colors.onPrimary.copy(alpha = 0.16f))
+                    color = colors.surface.copy(alpha = 0.10f),
+                    border = BorderStroke(1.dp, colors.heroAccent.copy(alpha = 0.40f))
                 ) {
                     FastProductImage(
                         drawableRes = R.drawable.ic_cleansupply_logo,
                         contentDescription = s.appBrand,
                         modifier = Modifier
-                            .size(72.dp)
+                            .size(80.dp)
                             .clip(shapes.largeSurface)
                     )
                 }
                 Text(s.appBrand, style = type.headlineMedium, color = colors.onPrimary)
-                Text(s.appTagline, style = type.bodySmall, color = colors.onPrimary.copy(alpha = 0.78f))
+                Text(
+                    text = s.appTagline,
+                    style = type.bodySmall,
+                    color = colors.onPrimary.copy(alpha = 0.80f),
+                    textAlign = TextAlign.Center
+                )
             }
         }
     }
@@ -294,14 +312,14 @@ fun AuthScreen(
                 ) {
                     Surface(
                         shape = shapes.button,
-                        border = BorderStroke(1.dp, colors.outline),
-                        color = colors.surface
+                        border = BorderStroke(1.dp, colors.primary.copy(alpha = 0.25f)),
+                        color = colors.primaryContainer
                     ) {
                         FastProductImage(
                             drawableRes = R.drawable.ic_cleansupply_logo,
                             contentDescription = s.appBrand,
                             modifier = Modifier
-                                .size(42.dp)
+                                .size(44.dp)
                                 .clip(shapes.button)
                         )
                     }
@@ -314,7 +332,7 @@ fun AuthScreen(
                         Text(
                             text = if (s.isArabic) "جملة • شركات • تجزئة" else "B2B • Wholesale • Retail",
                             style = type.caption,
-                            color = colors.textSecondary
+                            color = colors.primary
                         )
                     }
                 }
@@ -355,7 +373,7 @@ fun AuthScreen(
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(176.dp)
+                            .height(152.dp)
                             .clip(shapes.card)
                     ) {
                         FastProductImage(
@@ -363,30 +381,49 @@ fun AuthScreen(
                             contentDescription = s.appBrand,
                             modifier = Modifier.fillMaxSize()
                         )
-                        Surface(
-                            color = colors.brandSlate.copy(alpha = 0.90f),
-                            shape = shapes.pill,
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .background(
+                                    Brush.verticalGradient(
+                                        listOf(Color.Transparent, colors.scrim.copy(alpha = 0.78f))
+                                    )
+                                )
+                        )
+                        Column(
                             modifier = Modifier
                                 .align(Alignment.BottomStart)
-                                .padding(spacing.sm)
+                                .padding(spacing.md),
+                            verticalArrangement = Arrangement.spacedBy(spacing.xs)
                         ) {
-                            Row(
-                                modifier = Modifier.padding(horizontal = spacing.sm, vertical = 5.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(spacing.xxs)
+                            Surface(
+                                color = colors.brandSlate.copy(alpha = 0.90f),
+                                border = BorderStroke(1.dp, colors.heroAccent.copy(alpha = 0.45f)),
+                                shape = shapes.pill
                             ) {
-                                Icon(
-                                    imageVector = CleanSupplyIcons.Verified,
-                                    contentDescription = null,
-                                    tint = colors.primary,
-                                    modifier = Modifier.size(14.dp)
-                                )
-                                Text(
-                                    text = s.heroBadge,
-                                    style = type.labelSmall,
-                                    color = colors.onPrimary
-                                )
+                                Row(
+                                    modifier = Modifier.padding(horizontal = spacing.sm, vertical = 5.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(spacing.xxs)
+                                ) {
+                                    Icon(
+                                        imageVector = CleanSupplyIcons.ShieldVerified,
+                                        contentDescription = null,
+                                        tint = colors.heroAccent,
+                                        modifier = Modifier.size(14.dp)
+                                    )
+                                    Text(
+                                        text = s.heroBadge,
+                                        style = type.labelSmall,
+                                        color = colors.onPrimary
+                                    )
+                                }
                             }
+                            Text(
+                                text = s.appTagline,
+                                style = type.titleSmall,
+                                color = colors.onPrimary
+                            )
                         }
                     }
 
@@ -511,7 +548,7 @@ private fun AuthValuePropRow(icon: ImageVector, label: String) {
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(spacing.sm)) {
         Box(
             modifier = Modifier
-                .size(34.dp)
+                .size(36.dp)
                 .background(colors.primaryContainer, shapes.smallComponent),
             contentAlignment = Alignment.Center
         ) {

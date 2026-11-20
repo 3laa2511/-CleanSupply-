@@ -5,6 +5,7 @@ import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.automirrored.rounded.ArrowForward
 import androidx.compose.material.icons.automirrored.rounded.Login
 import androidx.compose.material.icons.automirrored.rounded.Logout
+import androidx.compose.material.icons.automirrored.rounded.ReceiptLong
 import androidx.compose.material.icons.outlined.Category
 import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.Person
@@ -28,6 +29,7 @@ import androidx.compose.material.icons.rounded.CreditCard
 import androidx.compose.material.icons.rounded.DarkMode
 import androidx.compose.material.icons.rounded.DeleteOutline
 import androidx.compose.material.icons.rounded.ErrorOutline
+import androidx.compose.material.icons.rounded.FilterAltOff
 import androidx.compose.material.icons.rounded.GridView
 import androidx.compose.material.icons.rounded.History
 import androidx.compose.material.icons.rounded.Home
@@ -44,18 +46,20 @@ import androidx.compose.material.icons.rounded.LocationOn
 import androidx.compose.material.icons.rounded.Payments
 import androidx.compose.material.icons.rounded.Person
 import androidx.compose.material.icons.rounded.PrecisionManufacturing
-import androidx.compose.material.icons.rounded.ReceiptLong
 import androidx.compose.material.icons.rounded.Remove
 import androidx.compose.material.icons.rounded.Replay
 import androidx.compose.material.icons.rounded.Sanitizer
 import androidx.compose.material.icons.rounded.Schedule
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.SearchOff
+import androidx.compose.material.icons.rounded.ShoppingBag
 import androidx.compose.material.icons.rounded.ShoppingCart
 import androidx.compose.material.icons.rounded.Storefront
 import androidx.compose.material.icons.rounded.SupportAgent
 import androidx.compose.material.icons.rounded.SwapVert
+import androidx.compose.material.icons.rounded.Tune
 import androidx.compose.material.icons.rounded.Verified
+import androidx.compose.material.icons.rounded.VerifiedUser
 import androidx.compose.material.icons.rounded.ViewAgenda
 import androidx.compose.material.icons.rounded.WarningAmber
 import androidx.compose.material.icons.rounded.WifiOff
@@ -65,7 +69,7 @@ import com.example.data.model.OrderStatus
 import com.example.data.model.PaymentMethod
 
 /**
- * Centralized Material Rounded iconography mapping for consistent optical weight across CleanSupply.
+ * Centralized Material Rounded iconography mapping for consistent optical weight and RTL mirroring across CleanSupply.
  */
 object CleanSupplyIcons {
     // Navigation (Active / Inactive pairs)
@@ -85,6 +89,7 @@ object CleanSupplyIcons {
     val Forward: ImageVector = Icons.AutoMirrored.Rounded.ArrowForward
     val Login: ImageVector = Icons.AutoMirrored.Rounded.Login
     val Logout: ImageVector = Icons.AutoMirrored.Rounded.Logout
+    val Receipt: ImageVector = Icons.AutoMirrored.Rounded.ReceiptLong
     val Add: ImageVector = Icons.Rounded.Add
     val Remove: ImageVector = Icons.Rounded.Remove
     val Delete: ImageVector = Icons.Rounded.DeleteOutline
@@ -92,8 +97,11 @@ object CleanSupplyIcons {
     val Copy: ImageVector = Icons.Rounded.ContentCopy
     val Reorder: ImageVector = Icons.Rounded.Replay
     val AddToCart: ImageVector = Icons.Rounded.AddShoppingCart
+    val Bag: ImageVector = Icons.Rounded.ShoppingBag
     val Search: ImageVector = Icons.Rounded.Search
     val SearchEmpty: ImageVector = Icons.Rounded.SearchOff
+    val ClearFilters: ImageVector = Icons.Rounded.FilterAltOff
+    val Tune: ImageVector = Icons.Rounded.Tune
     val History: ImageVector = Icons.Rounded.History
     val Sort: ImageVector = Icons.Rounded.SwapVert
     val GridView: ImageVector = Icons.Rounded.GridView
@@ -102,6 +110,7 @@ object CleanSupplyIcons {
 
     // Commerce & Status
     val Verified: ImageVector = Icons.Rounded.Verified
+    val ShieldVerified: ImageVector = Icons.Rounded.VerifiedUser
     val Pending: ImageVector = Icons.Rounded.HourglassTop
     val Rejected: ImageVector = Icons.Rounded.Cancel
     val Check: ImageVector = Icons.Rounded.CheckCircle
@@ -137,11 +146,11 @@ object CleanSupplyIcons {
         PaymentMethod.COD -> Icons.Rounded.Payments
         PaymentMethod.CARD -> Icons.Rounded.CreditCard
         PaymentMethod.MOBILE_WALLET -> Icons.Rounded.AccountBalanceWallet
-        PaymentMethod.CREDIT_INVOICE -> Icons.Rounded.ReceiptLong
+        PaymentMethod.CREDIT_INVOICE -> Icons.AutoMirrored.Rounded.ReceiptLong
     }
 
     fun orderStatusIcon(status: OrderStatus): ImageVector = when (status) {
-        OrderStatus.PLACED -> Icons.Rounded.ReceiptLong
+        OrderStatus.PLACED -> Icons.AutoMirrored.Rounded.ReceiptLong
         OrderStatus.CONFIRMED -> Icons.Rounded.CheckCircle
         OrderStatus.PACKED -> Icons.Rounded.Inventory2
         OrderStatus.OUT_FOR_DELIVERY -> Icons.Rounded.LocalShipping

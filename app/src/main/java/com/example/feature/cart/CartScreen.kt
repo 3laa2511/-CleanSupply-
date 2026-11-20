@@ -1,5 +1,6 @@
 package com.example.feature.cart
 
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -7,7 +8,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -16,7 +16,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.FilterChip
@@ -48,6 +47,7 @@ import com.example.core.components.CleanSupplyPrimaryButton
 import com.example.core.components.CleanSupplySecondaryButton
 import com.example.core.components.EmptyStateView
 import com.example.core.components.FastProductImage
+import com.example.core.components.QuantityStepper
 import com.example.core.designsystem.CleanSupplyIcons
 import com.example.core.designsystem.CleanSupplyTheme
 import com.example.core.formatting.Formatters
@@ -80,6 +80,10 @@ fun CartScreen(
     val type = CleanSupplyTheme.typography
 
     var couponInput by remember(draft.appliedCouponCode) { mutableStateOf(draft.appliedCouponCode) }
+    val shippingProgress by animateFloatAsState(
+        targetValue = summary.freeShippingProgress,
+        label = "cartShippingProgress"
+    )
 
     if (summary.lines.isEmpty()) {
         EmptyStateView(
@@ -103,284 +107,306 @@ fun CartScreen(
             verticalArrangement = Arrangement.spacedBy(spacing.sm)
         ) {
             item(key = "cart_header") {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(s.cartTitle, style = type.headlineSmall, color = colors.textPrimary)
-                Surface(color = colors.primaryContainer, shape = shapes.pill) {
-                    Text(
-                        text = "${summary.lines.size} ${s.resultsCountLabel}",
-                        style = type.numericSmall,
-                        color = colors.onPrimaryContainer,
-                        modifier = Modifier.padding(horizontal = spacing.sm, vertical = 4.dp)
-                    )
-                }
-            }
-        }
-
-        if (summary.hasMoqViolation) {
-            item(key = "moq_warning") {
-                Surface(
-                    color = colors.errorContainer,
-                    shape = shapes.card,
-                    border = BorderStroke(1.dp, colors.error.copy(alpha = 0.25f)),
-                    modifier = Modifier.fillMaxWidth()
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Row(
-                        modifier = Modifier.padding(spacing.md),
-                        horizontalArrangement = Arrangement.spacedBy(spacing.sm),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(CleanSupplyIcons.Warning, contentDescription = null, tint = colors.error)
-                        Text(s.moqWarning, style = type.bodySmall, color = colors.error)
-                    }
-                }
-            }
-        }
-
-        item(key = "free_shipping") {
-            Card(
-                shape = shapes.card,
-                border = BorderStroke(1.dp, colors.outline),
-                colors = CardDefaults.cardColors(containerColor = colors.surface)
-            ) {
-                Column(
-                    modifier = Modifier.padding(spacing.md),
-                    verticalArrangement = Arrangement.spacedBy(spacing.xs)
-                ) {
-                    val shipMsg = if (summary.shippingFee == 0.0) {
-                        if (s.isArabic) "مبروك! حصلت على شحن مجاني لهذه المنطقة" else "Free delivery unlocked for this zone"
-                    } else {
-                        if (s.isArabic) "أضف ${Formatters.money(summary.amountToFreeShipping, s.currency)} للحصول على شحن مجاني"
-                        else "Add ${Formatters.money(summary.amountToFreeShipping, s.currency)} more for free shipping"
-                    }
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(spacing.xs)
-                    ) {
-                        Icon(CleanSupplyIcons.Shipping, contentDescription = null, tint = colors.primary, modifier = Modifier.size(18.dp))
-                        Text(shipMsg, style = type.labelLarge, color = colors.primary)
-                    }
-                    LinearProgressIndicator(
-                        progress = { summary.freeShippingProgress },
-                        color = colors.primary,
-                        trackColor = colors.primaryContainer,
-                        strokeCap = StrokeCap.Round,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(8.dp)
-                            .clip(shapes.pill)
-                    )
-                }
-            }
-        }
-
-        items(summary.lines, key = { it.cartItem.id }, contentType = { "cart_line" }) { line ->
-            CartLineCard(
-                line = line,
-                onUpdateQty = { newQty ->
-                    onUpdateCartQty(line.product.id, newQty, line.cartItem.packModeEnum())
-                }
-            )
-        }
-
-        item(key = "coupon_loyalty") {
-            Card(
-                shape = shapes.card,
-                border = BorderStroke(1.dp, colors.outline),
-                colors = CardDefaults.cardColors(containerColor = colors.surface)
-            ) {
-                Column(
-                    modifier = Modifier.padding(spacing.md),
-                    verticalArrangement = Arrangement.spacedBy(spacing.sm)
-                ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(spacing.xs),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        OutlinedTextField(
-                            value = couponInput,
-                            onValueChange = { couponInput = it },
-                            placeholder = { Text(s.couponHint, style = type.bodyMedium, maxLines = 1, overflow = TextOverflow.Ellipsis) },
-                            leadingIcon = { Icon(CleanSupplyIcons.Offer, contentDescription = null, tint = colors.primary) },
-                            singleLine = true,
-                            shape = shapes.input,
-                            colors = OutlinedTextFieldDefaults.colors(
-                                focusedBorderColor = colors.primary,
-                                unfocusedBorderColor = colors.outline,
-                                focusedTextColor = colors.textPrimary,
-                                unfocusedTextColor = colors.textPrimary
-                            ),
-                            modifier = Modifier
-                                .weight(1f)
-                                .testTag("coupon_input")
-                        )
-                        if (draft.appliedCouponCode.isNotEmpty()) {
-                            CleanSupplySecondaryButton(
-                                text = s.removeCoupon,
-                                onClick = {
-                                    couponInput = ""
-                                    onRemoveCoupon()
-                                },
-                                modifier = Modifier.height(52.dp)
-                            )
-                        } else {
-                            CleanSupplyPrimaryButton(
-                                text = s.applyCoupon,
-                                onClick = { onApplyCoupon(couponInput) },
-                                testTag = "apply_coupon_btn",
-                                modifier = Modifier.height(52.dp)
-                            )
-                        }
-                    }
-
-                    if (draft.couponError) {
-                        Text(s.invalidCoupon, style = type.bodySmall, color = colors.error)
-                    }
-
-                    if (coupons.isNotEmpty()) {
-                        LazyRow(horizontalArrangement = Arrangement.spacedBy(spacing.xs)) {
-                            items(coupons, key = { it.id }) { c ->
-                                FilterChip(
-                                    selected = draft.appliedCouponCode.equals(c.code, ignoreCase = true),
-                                    onClick = {
-                                        couponInput = c.code
-                                        onApplyCoupon(c.code)
-                                    },
-                                    shape = shapes.pill,
-                                    colors = FilterChipDefaults.filterChipColors(
-                                        containerColor = colors.surfaceVariant,
-                                        selectedContainerColor = colors.primaryContainer,
-                                        selectedLabelColor = colors.onPrimaryContainer
-                                    ),
-                                    label = { Text("${c.code} • ${c.localizedTitle(s.isArabic)}", style = type.labelSmall) }
+                    Text(s.cartTitle, style = type.headlineSmall, color = colors.textPrimary)
+                    Row(horizontalArrangement = Arrangement.spacedBy(spacing.xs)) {
+                        if (summary.tierAndBulkSavings > 0.0) {
+                            Surface(color = colors.successContainer, shape = shapes.pill) {
+                                Text(
+                                    text = "-${Formatters.money(summary.tierAndBulkSavings, s.currency)}",
+                                    style = type.numericSmall,
+                                    color = colors.success,
+                                    modifier = Modifier.padding(horizontal = spacing.sm, vertical = 4.dp)
                                 )
                             }
                         }
+                        Surface(color = colors.primaryContainer, shape = shapes.pill) {
+                            Text(
+                                text = "${summary.lines.size} ${s.resultsCountLabel}",
+                                style = type.numericSmall,
+                                color = colors.onPrimaryContainer,
+                                modifier = Modifier.padding(horizontal = spacing.sm, vertical = 4.dp)
+                            )
+                        }
                     }
+                }
+            }
 
-                    HorizontalDivider(color = colors.outline)
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
+            if (summary.hasMoqViolation) {
+                item(key = "moq_warning") {
+                    Surface(
+                        color = colors.errorContainer,
+                        shape = shapes.card,
+                        border = BorderStroke(1.dp, colors.error.copy(alpha = 0.25f)),
+                        modifier = Modifier.fillMaxWidth()
                     ) {
                         Row(
-                            modifier = Modifier.weight(1f),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(spacing.sm)
+                            modifier = Modifier.padding(spacing.md),
+                            horizontalArrangement = Arrangement.spacedBy(spacing.sm),
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Box(
+                            Icon(CleanSupplyIcons.Warning, contentDescription = null, tint = colors.error)
+                            Text(s.moqWarning, style = type.bodySmall, color = colors.error)
+                        }
+                    }
+                }
+            }
+
+            item(key = "free_shipping") {
+                Card(
+                    shape = shapes.card,
+                    border = BorderStroke(1.dp, if (summary.shippingFee == 0.0) colors.success.copy(alpha = 0.30f) else colors.outline),
+                    colors = CardDefaults.cardColors(containerColor = colors.surface)
+                ) {
+                    Column(
+                        modifier = Modifier.padding(spacing.md),
+                        verticalArrangement = Arrangement.spacedBy(spacing.xs)
+                    ) {
+                        val shipMsg = if (summary.shippingFee == 0.0) {
+                            if (s.isArabic) "مبروك! حصلت على شحن مجاني لهذه المنطقة" else "Free delivery unlocked for this zone"
+                        } else {
+                            if (s.isArabic) "أضف ${Formatters.money(summary.amountToFreeShipping, s.currency)} للحصول على شحن مجاني"
+                            else "Add ${Formatters.money(summary.amountToFreeShipping, s.currency)} more for free shipping"
+                        }
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(spacing.xs)
+                        ) {
+                            Icon(
+                                imageVector = if (summary.shippingFee == 0.0) CleanSupplyIcons.Check else CleanSupplyIcons.Shipping,
+                                contentDescription = null,
+                                tint = if (summary.shippingFee == 0.0) colors.success else colors.primary,
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Text(
+                                text = shipMsg,
+                                style = type.labelLarge,
+                                color = if (summary.shippingFee == 0.0) colors.success else colors.primary
+                            )
+                        }
+                        LinearProgressIndicator(
+                            progress = { shippingProgress },
+                            color = if (summary.shippingFee == 0.0) colors.success else colors.primary,
+                            trackColor = colors.primaryContainer,
+                            strokeCap = StrokeCap.Round,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(8.dp)
+                                .clip(shapes.pill)
+                        )
+                    }
+                }
+            }
+
+            items(summary.lines, key = { it.cartItem.id }, contentType = { "cart_line" }) { line ->
+                CartLineCard(
+                    line = line,
+                    onUpdateQty = { newQty ->
+                        onUpdateCartQty(line.product.id, newQty, line.cartItem.packModeEnum())
+                    }
+                )
+            }
+
+            item(key = "coupon_loyalty") {
+                Card(
+                    shape = shapes.card,
+                    border = BorderStroke(1.dp, colors.outline),
+                    colors = CardDefaults.cardColors(containerColor = colors.surface)
+                ) {
+                    Column(
+                        modifier = Modifier.padding(spacing.md),
+                        verticalArrangement = Arrangement.spacedBy(spacing.sm)
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(spacing.xs),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            OutlinedTextField(
+                                value = couponInput,
+                                onValueChange = { couponInput = it },
+                                placeholder = { Text(s.couponHint, style = type.bodyMedium, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                                leadingIcon = { Icon(CleanSupplyIcons.Offer, contentDescription = null, tint = colors.primary) },
+                                singleLine = true,
+                                shape = shapes.input,
+                                colors = OutlinedTextFieldDefaults.colors(
+                                    focusedBorderColor = colors.primary,
+                                    unfocusedBorderColor = colors.outline,
+                                    focusedTextColor = colors.textPrimary,
+                                    unfocusedTextColor = colors.textPrimary
+                                ),
                                 modifier = Modifier
-                                    .size(38.dp)
-                                    .background(colors.warningContainer, shapes.button),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Icon(CleanSupplyIcons.Loyalty, contentDescription = null, tint = colors.warning, modifier = Modifier.size(19.dp))
-                            }
-                            Column {
-                                Text(s.loyaltyRedeemLabel, style = type.titleSmall, color = colors.textPrimary)
-                                Text(
-                                    text = "${profile?.loyaltyPoints ?: 0L} pts • ${Formatters.money((profile?.loyaltyPoints ?: 0L) / 10.0, s.currency)}",
-                                    style = type.numericSmall,
-                                    color = colors.warning
+                                    .weight(1f)
+                                    .testTag("coupon_input")
+                            )
+                            if (draft.appliedCouponCode.isNotEmpty()) {
+                                CleanSupplySecondaryButton(
+                                    text = s.removeCoupon,
+                                    onClick = {
+                                        couponInput = ""
+                                        onRemoveCoupon()
+                                    },
+                                    modifier = Modifier.height(52.dp)
+                                )
+                            } else {
+                                CleanSupplyPrimaryButton(
+                                    text = s.applyCoupon,
+                                    onClick = { onApplyCoupon(couponInput) },
+                                    testTag = "apply_coupon_btn",
+                                    modifier = Modifier.height(52.dp)
                                 )
                             }
                         }
-                        Switch(
-                            checked = draft.redeemLoyalty,
-                            enabled = (profile?.loyaltyPoints ?: 0L) >= 10L,
-                            onCheckedChange = onToggleLoyalty,
-                            colors = SwitchDefaults.colors(
-                                checkedThumbColor = colors.onPrimary,
-                                checkedTrackColor = colors.primary
-                            ),
-                            modifier = Modifier.testTag("loyalty_redeem_switch")
+
+                        if (draft.couponError) {
+                            Text(s.invalidCoupon, style = type.bodySmall, color = colors.error)
+                        }
+
+                        if (coupons.isNotEmpty()) {
+                            LazyRow(horizontalArrangement = Arrangement.spacedBy(spacing.xs)) {
+                                items(coupons, key = { it.id }) { c ->
+                                    FilterChip(
+                                        selected = draft.appliedCouponCode.equals(c.code, ignoreCase = true),
+                                        onClick = {
+                                            couponInput = c.code
+                                            onApplyCoupon(c.code)
+                                        },
+                                        shape = shapes.pill,
+                                        colors = FilterChipDefaults.filterChipColors(
+                                            containerColor = colors.surfaceVariant,
+                                            selectedContainerColor = colors.primaryContainer,
+                                            selectedLabelColor = colors.onPrimaryContainer
+                                        ),
+                                        label = { Text("${c.code} • ${c.localizedTitle(s.isArabic)}", style = type.labelSmall) }
+                                    )
+                                }
+                            }
+                        }
+
+                        HorizontalDivider(color = colors.outline)
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Row(
+                                modifier = Modifier.weight(1f),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(spacing.sm)
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(38.dp)
+                                        .background(colors.warningContainer, shapes.button),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(CleanSupplyIcons.Loyalty, contentDescription = null, tint = colors.warning, modifier = Modifier.size(19.dp))
+                                }
+                                Column {
+                                    Text(s.loyaltyRedeemLabel, style = type.titleSmall, color = colors.textPrimary)
+                                    Text(
+                                        text = "${profile?.loyaltyPoints ?: 0L} ${s.pointsUnit} • ${Formatters.money((profile?.loyaltyPoints ?: 0L) / 10.0, s.currency)}",
+                                        style = type.numericSmall,
+                                        color = colors.warning
+                                    )
+                                }
+                            }
+                            Switch(
+                                checked = draft.redeemLoyalty,
+                                enabled = (profile?.loyaltyPoints ?: 0L) >= 10L,
+                                onCheckedChange = onToggleLoyalty,
+                                colors = SwitchDefaults.colors(
+                                    checkedThumbColor = colors.onPrimary,
+                                    checkedTrackColor = colors.primary
+                                ),
+                                modifier = Modifier.testTag("loyalty_redeem_switch")
+                            )
+                        }
+                    }
+                }
+            }
+
+            item(key = "cart_summary_cta") {
+                Card(
+                    shape = shapes.largeSurface,
+                    border = BorderStroke(1.dp, colors.outline),
+                    colors = CardDefaults.cardColors(containerColor = colors.surface)
+                ) {
+                    Column(
+                        modifier = Modifier.padding(spacing.md),
+                        verticalArrangement = Arrangement.spacedBy(spacing.xs)
+                    ) {
+                        CartSummaryLine(s.subtotalLabel, Formatters.money(summary.retailSubtotal, s.currency))
+                        if (summary.tierAndBulkSavings > 0.0) {
+                            CartSummaryLine(s.tierSavingsLabel, "-${Formatters.money(summary.tierAndBulkSavings, s.currency)}", colors.success)
+                        }
+                        if (summary.couponDiscount > 0.0) {
+                            CartSummaryLine(s.couponDiscountLabel, "-${Formatters.money(summary.couponDiscount, s.currency)}", colors.success)
+                        }
+                        if (summary.loyaltyDiscount > 0.0) {
+                            CartSummaryLine(s.loyaltyDiscountLabel, "-${Formatters.money(summary.loyaltyDiscount, s.currency)}", colors.warning)
+                        }
+                        CartSummaryLine(
+                            s.shippingFeeLabel,
+                            if (summary.shippingFee == 0.0) s.freeShippingLabel else Formatters.money(summary.shippingFee, s.currency),
+                            if (summary.shippingFee == 0.0) colors.success else colors.textPrimary
                         )
+                        HorizontalDivider(color = colors.outline)
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(s.totalLabel, style = type.titleMedium, color = colors.textPrimary)
+                            Text(
+                                text = Formatters.money(summary.grandTotal, s.currency),
+                                style = type.numericLarge,
+                                color = colors.primary
+                            )
+                        }
                     }
                 }
             }
         }
 
-        item(key = "cart_summary_cta") {
-            Card(
-                shape = shapes.largeSurface,
-                border = BorderStroke(1.dp, colors.outline),
-                colors = CardDefaults.cardColors(containerColor = colors.surface)
-            ) {
-                Column(
-                    modifier = Modifier.padding(spacing.md),
-                    verticalArrangement = Arrangement.spacedBy(spacing.xs)
+        // Sticky Checkout Dock
+        Surface(
+            color = colors.surface,
+            tonalElevation = 0.dp
+        ) {
+            Column {
+                HorizontalDivider(color = colors.outline)
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = spacing.md, vertical = spacing.sm),
+                    horizontalArrangement = Arrangement.spacedBy(spacing.md),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    CartSummaryLine(s.subtotalLabel, Formatters.money(summary.retailSubtotal, s.currency))
-                    if (summary.tierAndBulkSavings > 0.0) {
-                        CartSummaryLine(s.tierSavingsLabel, "-${Formatters.money(summary.tierAndBulkSavings, s.currency)}", colors.success)
-                    }
-                    if (summary.couponDiscount > 0.0) {
-                        CartSummaryLine(s.couponDiscountLabel, "-${Formatters.money(summary.couponDiscount, s.currency)}", colors.success)
-                    }
-                    if (summary.loyaltyDiscount > 0.0) {
-                        CartSummaryLine(s.loyaltyDiscountLabel, "-${Formatters.money(summary.loyaltyDiscount, s.currency)}", colors.warning)
-                    }
-                    CartSummaryLine(
-                        s.shippingFeeLabel,
-                        if (summary.shippingFee == 0.0) s.freeShippingLabel else Formatters.money(summary.shippingFee, s.currency),
-                        if (summary.shippingFee == 0.0) colors.success else colors.textPrimary
-                    )
-                    HorizontalDivider(color = colors.outline)
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(s.totalLabel, style = type.titleMedium, color = colors.textPrimary)
+                    Column(modifier = Modifier.weight(0.9f)) {
+                        Text(s.totalLabel, style = type.caption, color = colors.textSecondary)
                         Text(
                             text = Formatters.money(summary.grandTotal, s.currency),
-                            style = type.numericLarge,
+                            style = type.numericMedium,
                             color = colors.primary
                         )
                     }
-                }
-            }
-        }
-    }
-
-    Surface(
-        color = colors.surface,
-        tonalElevation = 0.dp
-    ) {
-        Column {
-            HorizontalDivider(color = colors.outline)
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = spacing.md, vertical = spacing.sm),
-                horizontalArrangement = Arrangement.spacedBy(spacing.md),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Column(modifier = Modifier.weight(0.9f)) {
-                    Text(s.totalLabel, style = type.caption, color = colors.textSecondary)
-                    Text(
-                        text = Formatters.money(summary.grandTotal, s.currency),
-                        style = type.numericMedium,
-                        color = colors.primary
+                    CleanSupplyPrimaryButton(
+                        text = s.proceedToCheckout,
+                        icon = CleanSupplyIcons.Forward,
+                        enabled = !summary.hasMoqViolation,
+                        onClick = onProceedToCheckout,
+                        testTag = "proceed_to_checkout_btn",
+                        modifier = Modifier.weight(1.3f)
                     )
                 }
-                CleanSupplyPrimaryButton(
-                    text = s.proceedToCheckout,
-                    icon = CleanSupplyIcons.Forward,
-                    enabled = !summary.hasMoqViolation,
-                    onClick = onProceedToCheckout,
-                    testTag = "proceed_to_checkout_btn",
-                    modifier = Modifier.weight(1.3f)
-                )
             }
         }
-    }
     }
 }
 
@@ -413,7 +439,7 @@ private fun CartLineCard(
                     drawableRes = Formatters.productDrawable(line.product.imageKey),
                     contentDescription = line.product.localizedName(s.isArabic),
                     modifier = Modifier
-                        .size(60.dp)
+                        .size(64.dp)
                         .clip(shapes.smallComponent)
                 )
                 Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
@@ -440,9 +466,9 @@ private fun CartLineCard(
                             color = colors.error
                         )
                     } else if (line.bulkDiscountApplied) {
-                        Surface(color = colors.discountContainer, shape = shapes.smallComponent) {
+                        Surface(color = colors.discountContainer, shape = shapes.pill) {
                             Row(
-                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                                modifier = Modifier.padding(horizontal = 7.dp, vertical = 2.dp),
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.spacedBy(3.dp)
                             ) {
@@ -458,7 +484,9 @@ private fun CartLineCard(
                 }
                 IconButton(
                     onClick = { onUpdateQty(0L) },
-                    modifier = Modifier.size(spacing.minTouchTarget)
+                    modifier = Modifier
+                        .size(spacing.minTouchTarget)
+                        .testTag("cart_remove_${line.product.id}")
                 ) {
                     Icon(CleanSupplyIcons.Delete, contentDescription = "Remove item", tint = colors.error)
                 }
@@ -469,38 +497,30 @@ private fun CartLineCard(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(spacing.xs)
-                ) {
-                    IconButton(
-                        onClick = { onUpdateQty(line.cartItem.quantity - 1L) },
-                        modifier = Modifier
-                            .size(spacing.minTouchTarget)
-                            .background(colors.surfaceVariant, CircleShape)
-                    ) {
-                        Icon(CleanSupplyIcons.Remove, contentDescription = "Decrease quantity", tint = colors.textPrimary)
-                    }
+                QuantityStepper(
+                    quantity = line.cartItem.quantity,
+                    canDecrement = line.cartItem.quantity > 0L,
+                    canIncrement = line.cartItem.quantity < 5000L,
+                    onDecrement = { onUpdateQty(line.cartItem.quantity - 1L) },
+                    onIncrement = { onUpdateQty(line.cartItem.quantity + 1L) },
+                    minusTestTag = "cart_qty_minus_${line.product.id}",
+                    plusTestTag = "cart_qty_plus_${line.product.id}"
+                )
+
+                Column(horizontalAlignment = Alignment.End) {
                     Text(
-                        text = line.cartItem.quantity.toString(),
+                        text = Formatters.money(line.lineEffectiveTotal, s.currency),
                         style = type.numericMedium,
                         color = colors.textPrimary
                     )
-                    IconButton(
-                        onClick = { onUpdateQty(line.cartItem.quantity + 1L) },
-                        modifier = Modifier
-                            .size(spacing.minTouchTarget)
-                            .background(colors.primaryContainer, CircleShape)
-                    ) {
-                        Icon(CleanSupplyIcons.Add, contentDescription = "Increase quantity", tint = colors.primary)
+                    if (line.lineSavings > 0.0) {
+                        Text(
+                            text = "-${Formatters.money(line.lineSavings, s.currency)}",
+                            style = type.caption,
+                            color = colors.success
+                        )
                     }
                 }
-
-                Text(
-                    text = Formatters.money(line.lineEffectiveTotal, s.currency),
-                    style = type.numericMedium,
-                    color = colors.textPrimary
-                )
             }
         }
     }

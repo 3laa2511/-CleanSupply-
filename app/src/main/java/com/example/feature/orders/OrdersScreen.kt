@@ -4,7 +4,9 @@ import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -65,7 +67,10 @@ fun OrdersListTab(
     modifier: Modifier = Modifier
 ) {
     val s = LocalAppStrings.current
+    val colors = CleanSupplyTheme.colors
+    val shapes = CleanSupplyTheme.shapes
     val spacing = CleanSupplyTheme.spacing
+    val type = CleanSupplyTheme.typography
 
     when (ordersState) {
         is UiState.Loading -> {
@@ -81,6 +86,7 @@ fun OrdersListTab(
             ErrorStateView(
                 message = ordersState.message,
                 onRetry = onRetry,
+                retryTestTag = "orders_retry_btn",
                 modifier = modifier
             )
         }
@@ -112,6 +118,44 @@ fun OrdersListTab(
                     contentPadding = PaddingValues(spacing.md),
                     verticalArrangement = Arrangement.spacedBy(spacing.sm)
                 ) {
+                    item(key = "orders_kpi_strip") {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(spacing.xs)
+                        ) {
+                            Surface(
+                                color = colors.primaryContainer.copy(alpha = 0.65f),
+                                shape = shapes.card,
+                                border = BorderStroke(1.dp, colors.primary.copy(alpha = 0.20f)),
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(spacing.sm),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Text(s.currentOrdersTitle, style = type.labelMedium, color = colors.onPrimaryContainer)
+                                    Text(activeOrders.size.toString(), style = type.numericMedium, color = colors.primary)
+                                }
+                            }
+                            Surface(
+                                color = colors.surface,
+                                shape = shapes.card,
+                                border = BorderStroke(1.dp, colors.outline),
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(spacing.sm),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Text(s.pastOrdersTitle, style = type.labelMedium, color = colors.textSecondary)
+                                    Text(pastOrders.size.toString(), style = type.numericMedium, color = colors.textPrimary)
+                                }
+                            }
+                        }
+                    }
+
                     if (activeOrders.isNotEmpty()) {
                         item(key = "active_orders_header") {
                             SectionHeader(title = s.currentOrdersTitle)
@@ -160,6 +204,7 @@ private fun OrderSummaryCard(
         onClick = onOpen,
         shape = shapes.card,
         colors = CardDefaults.cardColors(containerColor = colors.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = CleanSupplyTheme.elevations.subtle),
         border = BorderStroke(1.dp, colors.outline),
         modifier = Modifier
             .fillMaxWidth()
@@ -183,16 +228,23 @@ private fun OrderSummaryCard(
                 OrderStatusChip(order.statusEnum())
             }
 
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(spacing.xs)
+            Surface(
+                color = colors.surfaceVariant,
+                shape = shapes.smallComponent,
+                modifier = Modifier.fillMaxWidth()
             ) {
-                Icon(CleanSupplyIcons.Shipping, contentDescription = null, tint = colors.primary, modifier = Modifier.size(16.dp))
-                Text(
-                    text = "${if (s.isArabic) order.zoneNameAr else order.zoneNameEn} • ${order.carrierName}",
-                    style = type.bodySmall,
-                    color = colors.textSecondary
-                )
+                Row(
+                    modifier = Modifier.padding(horizontal = spacing.sm, vertical = spacing.xs),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(spacing.xs)
+                ) {
+                    Icon(CleanSupplyIcons.Shipping, contentDescription = null, tint = colors.primary, modifier = Modifier.size(16.dp))
+                    Text(
+                        text = "${if (s.isArabic) order.zoneNameAr else order.zoneNameEn} • ${order.carrierName}",
+                        style = type.bodySmall,
+                        color = colors.textSecondary
+                    )
+                }
             }
 
             HorizontalDivider(color = colors.outline)
@@ -264,9 +316,22 @@ fun OrderTrackingDetailSheet(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Column {
-                    Text(order.orderNumber, style = type.numericLarge, color = colors.textPrimary)
-                    Text(order.deliverySlot, style = type.caption, color = colors.textSecondary)
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(spacing.sm)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(40.dp)
+                            .background(colors.primaryContainer, shapes.button),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(CleanSupplyIcons.Receipt, contentDescription = null, tint = colors.primary)
+                    }
+                    Column {
+                        Text(order.orderNumber, style = type.numericLarge, color = colors.textPrimary)
+                        Text(order.deliverySlot, style = type.caption, color = colors.textSecondary)
+                    }
                 }
                 OrderStatusChip(status)
             }
@@ -291,6 +356,7 @@ fun OrderTrackingDetailSheet(
                     modifier = Modifier.padding(spacing.md),
                     verticalArrangement = Arrangement.spacedBy(spacing.xs)
                 ) {
+                    Text(s.orderItemsTitle, style = type.titleSmall, color = colors.textPrimary)
                     items.forEach { item ->
                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                             Text(

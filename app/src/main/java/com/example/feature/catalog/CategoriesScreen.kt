@@ -26,6 +26,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -56,6 +58,9 @@ fun CategoriesScreen(
 
     val countsByCat = remember(products) {
         products.groupingBy { it.categoryId }.eachCount()
+    }
+    val bulkCountsByCat = remember(products) {
+        products.filter { it.bulkDiscountPercent > 0L }.groupingBy { it.categoryId }.eachCount()
     }
 
     if (isLoading && categories.isEmpty()) {
@@ -89,9 +94,29 @@ fun CategoriesScreen(
         modifier = modifier.fillMaxSize()
     ) {
         item(span = { GridItemSpan(maxLineSpan) }, key = "categories_header") {
-            Column(verticalArrangement = Arrangement.spacedBy(spacing.xxs)) {
-                Text(s.categoriesTitle, style = type.headlineSmall, color = colors.textPrimary)
-                Text(s.categoriesSubtitle, style = type.bodySmall, color = colors.textSecondary)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(spacing.xxs)
+                ) {
+                    Text(s.categoriesTitle, style = type.headlineSmall, color = colors.textPrimary)
+                    Text(s.categoriesSubtitle, style = type.bodySmall, color = colors.textSecondary)
+                }
+                Surface(
+                    color = colors.primaryContainer,
+                    shape = shapes.pill
+                ) {
+                    Text(
+                        text = "${products.size} ${s.resultsCountLabel}",
+                        style = type.numericSmall,
+                        color = colors.onPrimaryContainer,
+                        modifier = Modifier.padding(horizontal = spacing.sm, vertical = 5.dp)
+                    )
+                }
             }
         }
 
@@ -100,52 +125,57 @@ fun CategoriesScreen(
             val selected = selectedCategoryId == null
             Surface(
                 onClick = { onSelectCategory(null) },
-                shape = shapes.card,
-                color = if (selected) colors.primaryContainer else colors.surface,
-                border = BorderStroke(if (selected) 1.5.dp else 1.dp, if (selected) colors.primary else colors.outline),
+                shape = shapes.largeSurface,
+                color = colors.brandSlate,
+                border = BorderStroke(
+                    width = if (selected) 2.dp else 1.dp,
+                    color = if (selected) colors.heroAccent else colors.outline
+                ),
                 modifier = Modifier
                     .fillMaxWidth()
                     .testTag("category_grid_card_all")
             ) {
                 Row(
-                    modifier = Modifier.padding(spacing.md),
+                    modifier = Modifier
+                        .background(Brush.horizontalGradient(listOf(colors.brandSlate, colors.brandSlateSurface)))
+                        .padding(spacing.md),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Row(
+                        modifier = Modifier.weight(1f),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(spacing.sm)
                     ) {
                         Box(
                             modifier = Modifier
-                                .size(40.dp)
-                                .background(
-                                    if (selected) colors.primary else colors.surfaceVariant,
-                                    shapes.button
-                                ),
+                                .size(44.dp)
+                                .background(colors.heroAccent.copy(alpha = 0.20f), shapes.button),
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
                                 imageVector = CleanSupplyIcons.AllCategories,
                                 contentDescription = null,
-                                tint = if (selected) colors.onPrimary else colors.primary,
-                                modifier = Modifier.size(20.dp)
+                                tint = colors.heroAccent,
+                                modifier = Modifier.size(22.dp)
                             )
                         }
-                        Column {
+                        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                             Text(
                                 text = s.allCategories,
                                 style = type.titleMedium,
-                                color = if (selected) colors.onPrimaryContainer else colors.textPrimary
+                                color = colors.onPrimary
                             )
                             Text(
-                                text = "${products.size} ${s.resultsCountLabel}",
+                                text = "${s.allProductsDesc} • ${products.size} ${s.resultsCountLabel}",
                                 style = type.caption,
-                                color = colors.textSecondary
+                                color = colors.onPrimary.copy(alpha = 0.80f),
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
                             )
                         }
                     }
-                    Icon(CleanSupplyIcons.Forward, contentDescription = null, tint = colors.primary)
+                    Icon(CleanSupplyIcons.Forward, contentDescription = null, tint = colors.heroAccent)
                 }
             }
         }
@@ -153,12 +183,14 @@ fun CategoriesScreen(
         items(categories, key = { it.id }) { cat ->
             val selected = selectedCategoryId == cat.id
             val count = countsByCat[cat.id] ?: 0
+            val bulkCount = bulkCountsByCat[cat.id] ?: 0
             Card(
                 onClick = { onSelectCategory(cat.id) },
                 shape = shapes.card,
                 colors = CardDefaults.cardColors(
                     containerColor = if (selected) colors.primaryContainer else colors.surface
                 ),
+                elevation = CardDefaults.cardElevation(defaultElevation = CleanSupplyTheme.elevations.subtle),
                 border = BorderStroke(
                     width = if (selected) 1.5.dp else 1.dp,
                     color = if (selected) colors.primary else colors.outline
@@ -171,7 +203,7 @@ fun CategoriesScreen(
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(104.dp)
+                            .height(112.dp)
                             .padding(spacing.xs)
                             .clip(shapes.smallComponent)
                     ) {
@@ -180,8 +212,17 @@ fun CategoriesScreen(
                             contentDescription = cat.localizedName(s.isArabic),
                             modifier = Modifier.fillMaxSize()
                         )
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .background(
+                                    Brush.verticalGradient(
+                                        listOf(Color.Transparent, colors.scrim.copy(alpha = 0.50f))
+                                    )
+                                )
+                        )
                         Surface(
-                            color = if (selected) colors.primary else colors.surface.copy(alpha = 0.92f),
+                            color = if (selected) colors.primary else colors.surface.copy(alpha = 0.94f),
                             shape = shapes.smallComponent,
                             modifier = Modifier
                                 .align(Alignment.TopStart)
@@ -194,6 +235,22 @@ fun CategoriesScreen(
                                     contentDescription = null,
                                     tint = if (selected) colors.onPrimary else colors.primary,
                                     modifier = Modifier.size(18.dp)
+                                )
+                            }
+                        }
+                        if (bulkCount > 0) {
+                            Surface(
+                                color = colors.discountContainer,
+                                shape = shapes.pill,
+                                modifier = Modifier
+                                    .align(Alignment.BottomEnd)
+                                    .padding(spacing.xs)
+                            ) {
+                                Text(
+                                    text = "$bulkCount ${s.categoryBulkTag}",
+                                    style = type.caption,
+                                    color = colors.discount,
+                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                                 )
                             }
                         }

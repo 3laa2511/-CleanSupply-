@@ -19,6 +19,7 @@ data class CleanSupplyColorTokens(
     val surface: Color,
     val surfaceElevated: Color,
     val surfaceVariant: Color,
+    val surfaceContainerHigh: Color,
     val outline: Color,
     val outlineStrong: Color,
     val textPrimary: Color,
@@ -44,26 +45,29 @@ data class CleanSupplyColorTokens(
     val shimmerBase: Color,
     val shimmerHighlight: Color,
     val brandSlate: Color,
-    val brandSlateSurface: Color
+    val brandSlateSurface: Color,
+    val heroAccent: Color,
+    val scrim: Color
 )
 
 val LightCleanSupplyColors = CleanSupplyColorTokens(
     primary = Color(0xFF0A7C71),
     primaryDark = Color(0xFF065B52),
     onPrimary = Color(0xFFFFFFFF),
-    primaryContainer = Color(0xFFDDF3F0),
+    primaryContainer = Color(0xFFD9F3F0),
     onPrimaryContainer = Color(0xFF054740),
     secondary = Color(0xFF0F1B2D),
     onSecondary = Color(0xFFFFFFFF),
-    secondaryContainer = Color(0xFFE7ECF2),
+    secondaryContainer = Color(0xFFE9EFF5),
     onSecondaryContainer = Color(0xFF0F1B2D),
-    background = Color(0xFFF6F8FA),
+    background = Color(0xFFF4F7FA),
     surface = Color(0xFFFFFFFF),
     surfaceElevated = Color(0xFFFFFFFF),
-    surfaceVariant = Color(0xFFEEF2F6),
-    outline = Color(0xFFE1E7EE),
-    outlineStrong = Color(0xFFC9D3DF),
-    textPrimary = Color(0xFF101828),
+    surfaceVariant = Color(0xFFEEF3F7),
+    surfaceContainerHigh = Color(0xFFE4EBF2),
+    outline = Color(0xFFE0E7EF),
+    outlineStrong = Color(0xFFC5D0DE),
+    textPrimary = Color(0xFF0F172A),
     textSecondary = Color(0xFF475467),
     textMuted = Color(0xFF667085),
     success = Color(0xFF067647),
@@ -83,10 +87,12 @@ val LightCleanSupplyColors = CleanSupplyColorTokens(
     pendingContainer = Color(0xFFFEF0C7),
     disabled = Color(0xFF98A2B3),
     disabledContainer = Color(0xFFF2F4F7),
-    shimmerBase = Color(0xFFE8EDF2),
-    shimmerHighlight = Color(0xFFF5F7FA),
-    brandSlate = Color(0xFF0F1B2D),
-    brandSlateSurface = Color(0xFF182942)
+    shimmerBase = Color(0xFFE7EDF3),
+    shimmerHighlight = Color(0xFFF6F8FB),
+    brandSlate = Color(0xFF0E1B2E),
+    brandSlateSurface = Color(0xFF162944),
+    heroAccent = Color(0xFF14B8A6),
+    scrim = Color(0xCC0A1525)
 )
 
 val DarkCleanSupplyColors = CleanSupplyColorTokens(
@@ -97,14 +103,15 @@ val DarkCleanSupplyColors = CleanSupplyColorTokens(
     onPrimaryContainer = Color(0xFFCCFBF1),
     secondary = Color(0xFFE2E8F0),
     onSecondary = Color(0xFF0F172A),
-    secondaryContainer = Color(0xFF1E293B),
+    secondaryContainer = Color(0xFF1B2738),
     onSecondaryContainer = Color(0xFFE2E8F0),
-    background = Color(0xFF0B111B),
-    surface = Color(0xFF111A28),
-    surfaceElevated = Color(0xFF172234),
-    surfaceVariant = Color(0xFF1B273A),
-    outline = Color(0xFF273549),
-    outlineStrong = Color(0xFF394B66),
+    background = Color(0xFF09101B),
+    surface = Color(0xFF111C2C),
+    surfaceElevated = Color(0xFF17253A),
+    surfaceVariant = Color(0xFF1B2A40),
+    surfaceContainerHigh = Color(0xFF22334D),
+    outline = Color(0xFF26364D),
+    outlineStrong = Color(0xFF394E6B),
     textPrimary = Color(0xFFF1F5F9),
     textSecondary = Color(0xFFCBD5E1),
     textMuted = Color(0xFF94A3B8),
@@ -126,9 +133,11 @@ val DarkCleanSupplyColors = CleanSupplyColorTokens(
     disabled = Color(0xFF64748B),
     disabledContainer = Color(0xFF1E293B),
     shimmerBase = Color(0xFF1B273A),
-    shimmerHighlight = Color(0xFF24344D),
-    brandSlate = Color(0xFF0F1B2D),
-    brandSlateSurface = Color(0xFF182942)
+    shimmerHighlight = Color(0xFF263854),
+    brandSlate = Color(0xFF0E1B2E),
+    brandSlateSurface = Color(0xFF182A46),
+    heroAccent = Color(0xFF2DD4BF),
+    scrim = Color(0xD9070F1B)
 )
 
 val LocalCleanSupplyColors = staticCompositionLocalOf { LightCleanSupplyColors }

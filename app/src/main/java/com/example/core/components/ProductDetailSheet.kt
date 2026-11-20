@@ -1,12 +1,12 @@
 package com.example.core.components
 
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -25,7 +25,7 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -39,6 +39,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
@@ -93,9 +96,17 @@ fun ProductDetailSheet(
     val packPrice = PricingEngine.round2(effectiveUnit * unitsPerPack * cartonBonus)
     val totalPrice = PricingEngine.round2(packPrice * quantity)
 
+    val unitPackPreviewPrice = authorizedBaseUnit
+    val cartonPackPreviewPrice = PricingEngine.round2(authorizedBaseUnit * product.cartonSize.coerceAtLeast(1L) * 0.96)
+
     val isAuthorizedB2B = profile != null &&
         profile.segmentEnum() != CustomerSegment.RETAIL &&
         profile.verificationEnum() == VerificationStatus.VERIFIED
+
+    val bulkProgressTarget = if (product.bulkMinQty > 0L) {
+        (effectiveUnits.toFloat() / product.bulkMinQty.toFloat()).coerceIn(0f, 1f)
+    } else 0f
+    val bulkProgress by animateFloatAsState(targetValue = bulkProgressTarget, label = "bulkProgress")
 
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
@@ -109,253 +120,329 @@ fun ProductDetailSheet(
             modifier = Modifier
                 .fillMaxWidth()
                 .navigationBarsPadding()
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = spacing.lg, vertical = spacing.xs),
-            verticalArrangement = Arrangement.spacedBy(spacing.md)
         ) {
-            // Product visual presentation
-            Box(
+            Column(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .height(210.dp)
-                    .clip(shapes.largeSurface)
+                    .weight(1f, fill = false)
+                    .verticalScroll(rememberScrollState())
+                    .padding(horizontal = spacing.lg, vertical = spacing.xs),
+                verticalArrangement = Arrangement.spacedBy(spacing.md)
             ) {
-                FastProductImage(
-                    drawableRes = Formatters.productDrawable(product.imageKey),
-                    contentDescription = product.localizedName(s.isArabic),
-                    modifier = Modifier.fillMaxSize()
-                )
-                Row(
+                // Hero Photo with gradient scrim and SKU/Stock chips
+                Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .align(Alignment.BottomStart)
-                        .padding(spacing.sm),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+                        .height(216.dp)
+                        .clip(shapes.largeSurface)
+                        .background(colors.surfaceVariant)
                 ) {
-                    Surface(
-                        color = colors.brandSlate.copy(alpha = 0.90f),
-                        shape = shapes.pill
-                    ) {
-                        Text(
-                            text = "${product.brand} • ${product.sku}",
-                            style = type.labelSmall,
-                            color = colors.onPrimary,
-                            modifier = Modifier.padding(horizontal = spacing.sm, vertical = 5.dp)
-                        )
-                    }
-                    Surface(
-                        color = if (product.stockQty > 0L) colors.successContainer else colors.outOfStockContainer,
-                        shape = shapes.pill
-                    ) {
-                        Text(
-                            text = if (product.stockQty > 0L) "${s.stockAvailable}: ${product.stockQty}" else s.outOfStock,
-                            style = type.labelSmall,
-                            color = if (product.stockQty > 0L) colors.success else colors.outOfStock,
-                            modifier = Modifier.padding(horizontal = spacing.sm, vertical = 5.dp)
-                        )
-                    }
-                }
-            }
-
-            Column(verticalArrangement = Arrangement.spacedBy(spacing.xxs)) {
-                Text(
-                    text = product.localizedName(s.isArabic),
-                    style = type.headlineSmall,
-                    color = colors.textPrimary
-                )
-                Text(
-                    text = product.localizedDesc(s.isArabic),
-                    style = type.bodyMedium,
-                    color = colors.textSecondary
-                )
-            }
-
-            // Pack Mode Selector Cards (Unit vs Carton)
-            if (product.cartonSize > 1L) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(spacing.sm)
-                ) {
-                    PackOptionCard(
-                        title = s.unitMode,
-                        subtitle = product.localizedUnit(s.isArabic),
-                        selected = packMode == PackMode.UNIT,
-                        onClick = { packMode = PackMode.UNIT },
-                        modifier = Modifier
-                            .weight(1f)
-                            .testTag("pack_mode_unit")
+                    FastProductImage(
+                        drawableRes = Formatters.productDrawable(product.imageKey),
+                        contentDescription = product.localizedName(s.isArabic),
+                        modifier = Modifier.fillMaxSize()
                     )
-                    PackOptionCard(
-                        title = s.cartonMode,
-                        subtitle = "${product.cartonSize}x (-4%)",
-                        selected = packMode == PackMode.CARTON,
-                        onClick = { packMode = PackMode.CARTON },
+                    Box(
                         modifier = Modifier
-                            .weight(1f)
-                            .testTag("pack_mode_carton")
+                            .fillMaxSize()
+                            .background(
+                                Brush.verticalGradient(
+                                    colors = listOf(Color.Transparent, colors.scrim.copy(alpha = 0.72f))
+                                )
+                            )
                     )
-                }
-            }
-
-            // Authorized Segment Pricing ONLY (no unauthorized segment prices exposed)
-            Surface(
-                color = colors.surfaceVariant,
-                shape = shapes.card,
-                border = BorderStroke(1.dp, colors.outline),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Column(
-                    modifier = Modifier.padding(spacing.md),
-                    verticalArrangement = Arrangement.spacedBy(spacing.xs)
-                ) {
                     Row(
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .align(Alignment.BottomStart)
+                            .padding(spacing.sm),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text(
-                            text = s.authorizedPricingTitle,
-                            style = type.titleSmall,
-                            color = colors.textPrimary
-                        )
-                        SegmentVerificationBadge(profile)
+                        Surface(
+                            color = colors.brandSlate.copy(alpha = 0.92f),
+                            shape = shapes.pill
+                        ) {
+                            Text(
+                                text = "${product.brand} • ${product.sku}",
+                                style = type.labelSmall,
+                                color = colors.onPrimary,
+                                modifier = Modifier.padding(horizontal = spacing.sm, vertical = 5.dp)
+                            )
+                        }
+                        Surface(
+                            color = if (product.stockQty > 0L) colors.successContainer else colors.outOfStockContainer,
+                            shape = shapes.pill
+                        ) {
+                            Text(
+                                text = if (product.stockQty > 0L) "${s.stockAvailable}: ${product.stockQty}" else s.outOfStock,
+                                style = type.labelSmall,
+                                color = if (product.stockQty > 0L) colors.success else colors.outOfStock,
+                                modifier = Modifier.padding(horizontal = spacing.sm, vertical = 5.dp)
+                            )
+                        }
                     }
+                }
 
+                // Product Title & Description
+                Column(verticalArrangement = Arrangement.spacedBy(spacing.xs)) {
+                    Text(
+                        text = product.localizedName(s.isArabic),
+                        style = type.headlineSmall,
+                        color = colors.textPrimary
+                    )
+                    Text(
+                        text = product.localizedDesc(s.isArabic),
+                        style = type.bodyMedium,
+                        color = colors.textSecondary
+                    )
+                }
+
+                // 3-Pill Commercial Specs Strip
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(spacing.xs)
+                ) {
+                    SpecMetricChip(
+                        label = s.specsUnitLabel,
+                        value = product.localizedUnit(s.isArabic),
+                        modifier = Modifier.weight(1f)
+                    )
+                    SpecMetricChip(
+                        label = s.specsCartonLabel,
+                        value = "${product.cartonSize} ${s.unitsWord}",
+                        modifier = Modifier.weight(1f)
+                    )
+                    SpecMetricChip(
+                        label = s.specsMoqLabel,
+                        value = "$moq ${s.unitsWord}",
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+
+                // Interactive Unit vs Carton Selector
+                if (product.cartonSize > 1L) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.Bottom
+                        horizontalArrangement = Arrangement.spacedBy(spacing.sm)
                     ) {
-                        Column {
-                            Text(
-                                text = "${s.moqLabel}: $moq • ${product.localizedUnit(s.isArabic)}",
-                                style = type.caption,
-                                color = colors.textSecondary
-                            )
-                            if (authorizedBaseUnit < product.retailPrice) {
-                                Text(
-                                    text = Formatters.money(product.retailPrice, s.currency),
-                                    style = type.numericSmall,
-                                    textDecoration = TextDecoration.LineThrough,
-                                    color = colors.textMuted
-                                )
-                            }
-                        }
-                        Text(
-                            text = Formatters.money(effectiveUnit, s.currency),
-                            style = type.numericLarge,
-                            color = colors.primary
+                        PackOptionCard(
+                            title = s.unitMode,
+                            subtitle = Formatters.money(unitPackPreviewPrice, s.currency),
+                            badge = null,
+                            selected = packMode == PackMode.UNIT,
+                            onClick = { packMode = PackMode.UNIT },
+                            modifier = Modifier
+                                .weight(1f)
+                                .testTag("pack_mode_unit")
+                        )
+                        PackOptionCard(
+                            title = s.cartonMode,
+                            subtitle = Formatters.money(cartonPackPreviewPrice, s.currency),
+                            badge = s.cartonBonusTag,
+                            selected = packMode == PackMode.CARTON,
+                            onClick = { packMode = PackMode.CARTON },
+                            modifier = Modifier
+                                .weight(1f)
+                                .testTag("pack_mode_carton")
                         )
                     }
+                }
 
-                    if (product.bulkDiscountPercent > 0L) {
-                        HorizontalDivider(color = colors.outline)
+                // Authorized Segment Pricing ONLY (zero leakage of unauthorized B2B rates)
+                Surface(
+                    color = colors.surfaceVariant,
+                    shape = shapes.card,
+                    border = BorderStroke(1.dp, colors.outline),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(
+                        modifier = Modifier.padding(spacing.md),
+                        verticalArrangement = Arrangement.spacedBy(spacing.sm)
+                    ) {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
+                            Text(
+                                text = s.authorizedPricingTitle,
+                                style = type.titleSmall,
+                                color = colors.textPrimary
+                            )
+                            SegmentVerificationBadge(profile)
+                        }
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.Bottom
+                        ) {
+                            Column {
+                                Text(
+                                    text = "${s.moqLabel}: $moq • ${product.localizedUnit(s.isArabic)}",
+                                    style = type.caption,
+                                    color = colors.textSecondary
+                                )
+                                if (authorizedBaseUnit < product.retailPrice) {
+                                    Text(
+                                        text = Formatters.money(product.retailPrice, s.currency),
+                                        style = type.numericSmall,
+                                        textDecoration = TextDecoration.LineThrough,
+                                        color = colors.textMuted
+                                    )
+                                }
+                            }
+                            Text(
+                                text = Formatters.money(effectiveUnit, s.currency),
+                                style = type.numericLarge,
+                                color = colors.primary
+                            )
+                        }
+
+                        if (product.bulkDiscountPercent > 0L) {
+                            HorizontalDivider(color = colors.outline)
+                            Column(verticalArrangement = Arrangement.spacedBy(spacing.xs)) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(spacing.xs),
+                                        modifier = Modifier.weight(1f)
+                                    ) {
+                                        Icon(
+                                            imageVector = CleanSupplyIcons.BulkDeal,
+                                            contentDescription = null,
+                                            tint = if (bulkApplied) colors.success else colors.discount,
+                                            modifier = Modifier.size(16.dp)
+                                        )
+                                        Text(
+                                            text = if (bulkApplied) {
+                                                s.bulkUnlockedLabel
+                                            } else {
+                                                val missing = (product.bulkMinQty - effectiveUnits).coerceAtLeast(1L)
+                                                s.unlockBulkHint.replace("%d", missing.toString())
+                                            },
+                                            style = type.labelMedium,
+                                            color = if (bulkApplied) colors.success else colors.textPrimary
+                                        )
+                                    }
+                                    Surface(
+                                        color = if (bulkApplied) colors.successContainer else colors.discountContainer,
+                                        shape = shapes.pill
+                                    ) {
+                                        Text(
+                                            text = "-${product.bulkDiscountPercent}%",
+                                            style = type.numericSmall,
+                                            color = if (bulkApplied) colors.success else colors.discount,
+                                            modifier = Modifier.padding(horizontal = spacing.xs, vertical = 3.dp)
+                                        )
+                                    }
+                                }
+                                LinearProgressIndicator(
+                                    progress = { bulkProgress },
+                                    color = if (bulkApplied) colors.success else colors.discount,
+                                    trackColor = colors.outline,
+                                    strokeCap = StrokeCap.Round,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(6.dp)
+                                        .clip(shapes.pill)
+                                )
+                            }
+                        }
+
+                        if (!isAuthorizedB2B) {
+                            HorizontalDivider(color = colors.outline)
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.spacedBy(spacing.xs)
                             ) {
-                                Icon(CleanSupplyIcons.BulkDeal, contentDescription = null, tint = colors.discount, modifier = Modifier.size(16.dp))
+                                Icon(CleanSupplyIcons.Info, contentDescription = null, tint = colors.info, modifier = Modifier.size(16.dp))
                                 Text(
-                                    text = "${s.bulkSavingsTag} (${product.bulkMinQty}+)",
-                                    style = type.labelMedium,
-                                    color = colors.textPrimary
+                                    text = s.b2bUpgradePricingNote,
+                                    style = type.caption,
+                                    color = colors.textSecondary
                                 )
-                            }
-                            Surface(
-                                color = if (bulkApplied) colors.successContainer else colors.discountContainer,
-                                shape = shapes.pill
-                            ) {
-                                Row(
-                                    modifier = Modifier.padding(horizontal = spacing.xs, vertical = 3.dp),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(4.dp)
-                                ) {
-                                    if (bulkApplied) {
-                                        Icon(CleanSupplyIcons.Check, contentDescription = null, tint = colors.success, modifier = Modifier.size(13.dp))
-                                    }
-                                    Text(
-                                        text = "-${product.bulkDiscountPercent}%",
-                                        style = type.numericSmall,
-                                        color = if (bulkApplied) colors.success else colors.discount
-                                    )
-                                }
                             }
                         }
                     }
+                }
 
-                    if (!isAuthorizedB2B) {
-                        HorizontalDivider(color = colors.outline)
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(spacing.xs)
-                        ) {
-                            Icon(CleanSupplyIcons.Info, contentDescription = null, tint = colors.info, modifier = Modifier.size(16.dp))
-                            Text(
-                                text = s.b2bUpgradePricingNote,
-                                style = type.caption,
-                                color = colors.textSecondary
-                            )
+                // Related Products Shelf
+                if (relatedProducts.isNotEmpty()) {
+                    Column(verticalArrangement = Arrangement.spacedBy(spacing.xs)) {
+                        Text(
+                            text = s.relatedProductsTitle,
+                            style = type.titleMedium,
+                            color = colors.textPrimary
+                        )
+                        LazyRow(horizontalArrangement = Arrangement.spacedBy(spacing.sm)) {
+                            items(relatedProducts, key = { it.id }) { rel ->
+                                Surface(
+                                    onClick = { onSelectRelated(rel) },
+                                    shape = shapes.card,
+                                    color = colors.surfaceVariant,
+                                    border = BorderStroke(1.dp, colors.outline),
+                                    modifier = Modifier.width(156.dp)
+                                ) {
+                                    Column(
+                                        modifier = Modifier.padding(spacing.xs),
+                                        verticalArrangement = Arrangement.spacedBy(spacing.xs)
+                                    ) {
+                                        FastProductImage(
+                                            drawableRes = Formatters.productDrawable(rel.imageKey),
+                                            contentDescription = rel.localizedName(s.isArabic),
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .height(74.dp)
+                                                .clip(shapes.smallComponent)
+                                        )
+                                        Text(
+                                            text = rel.localizedName(s.isArabic),
+                                            style = type.labelMedium,
+                                            color = colors.textPrimary,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis
+                                        )
+                                        Text(
+                                            text = Formatters.money(
+                                                PricingEngine.resolveTierBaseUnitPrice(rel, profile),
+                                                s.currency
+                                            ),
+                                            style = type.numericSmall,
+                                            color = colors.primary
+                                        )
+                                    }
+                                }
+                            }
                         }
                     }
                 }
             }
 
-            // Quantity & Add CTA
+            // Sticky Bottom Add-To-Cart Dock
+            HorizontalDivider(color = colors.outline)
             Row(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(colors.surface)
+                    .padding(horizontal = spacing.lg, vertical = spacing.sm),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(spacing.sm)
             ) {
-                Surface(
-                    color = colors.surfaceVariant,
-                    shape = shapes.button,
-                    border = BorderStroke(1.dp, colors.outline)
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.padding(horizontal = spacing.xxs, vertical = 2.dp)
-                    ) {
-                        IconButton(
-                            onClick = { if (quantity > minPacks) quantity-- },
-                            enabled = quantity > minPacks,
-                            modifier = Modifier
-                                .size(spacing.minTouchTarget)
-                                .testTag("detail_qty_minus")
-                        ) {
-                            Icon(CleanSupplyIcons.Remove, contentDescription = "Decrease")
-                        }
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            modifier = Modifier.padding(horizontal = spacing.xs)
-                        ) {
-                            Text(
-                                text = quantity.toString(),
-                                style = type.numericMedium,
-                                color = colors.textPrimary
-                            )
-                            Text(
-                                text = "$effectiveUnits ${if (s.isArabic) "وحدة" else "units"}",
-                                style = type.caption,
-                                color = colors.textSecondary
-                            )
-                        }
-                        IconButton(
-                            onClick = { if (effectiveUnits + unitsPerPack <= product.stockQty) quantity++ },
-                            enabled = effectiveUnits + unitsPerPack <= product.stockQty,
-                            modifier = Modifier
-                                .size(spacing.minTouchTarget)
-                                .testTag("detail_qty_plus")
-                        ) {
-                            Icon(CleanSupplyIcons.Add, contentDescription = "Increase", tint = colors.primary)
-                        }
-                    }
-                }
+                QuantityStepper(
+                    quantity = quantity,
+                    canDecrement = quantity > minPacks,
+                    canIncrement = effectiveUnits + unitsPerPack <= product.stockQty,
+                    onDecrement = { if (quantity > minPacks) quantity-- },
+                    onIncrement = { if (effectiveUnits + unitsPerPack <= product.stockQty) quantity++ },
+                    subtitle = "$effectiveUnits ${s.unitsWord}",
+                    minusTestTag = "detail_qty_minus",
+                    plusTestTag = "detail_qty_plus"
+                )
 
                 Button(
                     onClick = { onAddToCart(quantity, packMode) },
@@ -380,59 +467,33 @@ fun ProductDetailSheet(
                     )
                 }
             }
+        }
+    }
+}
 
-            // Related Products
-            if (relatedProducts.isNotEmpty()) {
-                Column(verticalArrangement = Arrangement.spacedBy(spacing.xs)) {
-                    Text(
-                        text = s.relatedProductsTitle,
-                        style = type.titleMedium,
-                        color = colors.textPrimary
-                    )
-                    LazyRow(horizontalArrangement = Arrangement.spacedBy(spacing.sm)) {
-                        items(relatedProducts, key = { it.id }) { rel ->
-                            Surface(
-                                onClick = { onSelectRelated(rel) },
-                                shape = shapes.card,
-                                color = colors.surfaceVariant,
-                                border = BorderStroke(1.dp, colors.outline),
-                                modifier = Modifier.width(156.dp)
-                            ) {
-                                Column(
-                                    modifier = Modifier.padding(spacing.xs),
-                                    verticalArrangement = Arrangement.spacedBy(spacing.xs)
-                                ) {
-                                    FastProductImage(
-                                        drawableRes = Formatters.productDrawable(rel.imageKey),
-                                        contentDescription = rel.localizedName(s.isArabic),
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .height(74.dp)
-                                            .clip(shapes.smallComponent)
-                                    )
-                                    Text(
-                                        text = rel.localizedName(s.isArabic),
-                                        style = type.labelMedium,
-                                        color = colors.textPrimary,
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis
-                                    )
-                                    Text(
-                                        text = Formatters.money(
-                                            PricingEngine.resolveTierBaseUnitPrice(rel, profile),
-                                            s.currency
-                                        ),
-                                        style = type.numericSmall,
-                                        color = colors.primary
-                                    )
-                                }
-                            }
-                        }
-                    }
-                }
-            }
+@Composable
+private fun SpecMetricChip(
+    label: String,
+    value: String,
+    modifier: Modifier = Modifier
+) {
+    val colors = CleanSupplyTheme.colors
+    val shapes = CleanSupplyTheme.shapes
+    val spacing = CleanSupplyTheme.spacing
+    val type = CleanSupplyTheme.typography
 
-            Spacer(Modifier.height(spacing.sm))
+    Surface(
+        color = colors.surfaceVariant,
+        shape = shapes.button,
+        border = BorderStroke(1.dp, colors.outline),
+        modifier = modifier
+    ) {
+        Column(
+            modifier = Modifier.padding(horizontal = spacing.sm, vertical = spacing.xs),
+            verticalArrangement = Arrangement.spacedBy(2.dp)
+        ) {
+            Text(label, style = type.caption, color = colors.textSecondary, maxLines = 1)
+            Text(value, style = type.labelMedium, color = colors.textPrimary, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
     }
 }
@@ -441,6 +502,7 @@ fun ProductDetailSheet(
 private fun PackOptionCard(
     title: String,
     subtitle: String,
+    badge: String?,
     selected: Boolean,
     onClick: () -> Unit,
     modifier: Modifier = Modifier
@@ -461,15 +523,34 @@ private fun PackOptionCard(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            Column {
-                Text(
-                    text = title,
-                    style = type.labelLarge,
-                    color = if (selected) colors.onPrimaryContainer else colors.textPrimary
-                )
+            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(spacing.xxs)
+                ) {
+                    Text(
+                        text = title,
+                        style = type.labelLarge,
+                        color = if (selected) colors.onPrimaryContainer else colors.textPrimary,
+                        maxLines = 1
+                    )
+                    if (!badge.isNullOrBlank()) {
+                        Surface(
+                            color = colors.successContainer,
+                            shape = shapes.pill
+                        ) {
+                            Text(
+                                text = badge,
+                                style = type.caption,
+                                color = colors.success,
+                                modifier = Modifier.padding(horizontal = 5.dp, vertical = 1.dp)
+                            )
+                        }
+                    }
+                }
                 Text(
                     text = subtitle,
-                    style = type.caption,
+                    style = type.numericSmall,
                     color = if (selected) colors.primary else colors.textSecondary
                 )
             }

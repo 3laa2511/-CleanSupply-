@@ -9,6 +9,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -197,6 +198,7 @@ fun CleanSupplySearchField(
     onSubmit: () -> Unit = {},
     testTag: String? = null
 ) {
+    val s = LocalAppStrings.current
     val colors = CleanSupplyTheme.colors
     val shapes = CleanSupplyTheme.shapes
     val type = CleanSupplyTheme.typography
@@ -214,12 +216,15 @@ fun CleanSupplySearchField(
             )
         },
         leadingIcon = {
-            Icon(CleanSupplyIcons.Search, contentDescription = null, tint = colors.primary)
+            Icon(CleanSupplyIcons.Search, contentDescription = s.navSearch, tint = colors.primary)
         },
         trailingIcon = {
             if (query.isNotEmpty()) {
-                IconButton(onClick = { onQueryChange("") }) {
-                    Icon(CleanSupplyIcons.Close, contentDescription = "Clear search", tint = colors.textSecondary)
+                IconButton(
+                    onClick = { onQueryChange("") },
+                    modifier = Modifier.size(48.dp)
+                ) {
+                    Icon(CleanSupplyIcons.Close, contentDescription = s.closeBtn, tint = colors.textSecondary)
                 }
             }
         },
@@ -231,7 +236,7 @@ fun CleanSupplySearchField(
             focusedContainerColor = colors.surface,
             unfocusedContainerColor = colors.surface,
             focusedBorderColor = colors.primary,
-            unfocusedBorderColor = colors.outline,
+            unfocusedBorderColor = colors.outlineStrong,
             focusedTextColor = colors.textPrimary,
             unfocusedTextColor = colors.textPrimary
         ),
@@ -239,6 +244,81 @@ fun CleanSupplySearchField(
             .fillMaxWidth()
             .let { if (testTag != null) it.testTag(testTag) else it }
     )
+}
+
+@Composable
+fun QuantityStepper(
+    quantity: Long,
+    canDecrement: Boolean,
+    canIncrement: Boolean,
+    onDecrement: () -> Unit,
+    onIncrement: () -> Unit,
+    modifier: Modifier = Modifier,
+    subtitle: String? = null,
+    minusTestTag: String? = null,
+    plusTestTag: String? = null
+) {
+    val colors = CleanSupplyTheme.colors
+    val shapes = CleanSupplyTheme.shapes
+    val spacing = CleanSupplyTheme.spacing
+    val type = CleanSupplyTheme.typography
+
+    Surface(
+        color = colors.surfaceVariant,
+        shape = shapes.button,
+        border = BorderStroke(1.dp, colors.outline),
+        modifier = modifier
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.padding(horizontal = spacing.xxs, vertical = 2.dp)
+        ) {
+            IconButton(
+                onClick = onDecrement,
+                enabled = canDecrement,
+                modifier = Modifier
+                    .size(spacing.minTouchTarget)
+                    .let { if (minusTestTag != null) it.testTag(minusTestTag) else it }
+            ) {
+                Icon(
+                    imageVector = CleanSupplyIcons.Remove,
+                    contentDescription = "Decrease quantity",
+                    tint = if (canDecrement) colors.textPrimary else colors.disabled
+                )
+            }
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                modifier = Modifier.padding(horizontal = spacing.xs)
+            ) {
+                Text(
+                    text = quantity.toString(),
+                    style = type.numericMedium,
+                    color = colors.textPrimary
+                )
+                if (!subtitle.isNullOrBlank()) {
+                    Text(
+                        text = subtitle,
+                        style = type.caption,
+                        color = colors.textSecondary,
+                        maxLines = 1
+                    )
+                }
+            }
+            IconButton(
+                onClick = onIncrement,
+                enabled = canIncrement,
+                modifier = Modifier
+                    .size(spacing.minTouchTarget)
+                    .let { if (plusTestTag != null) it.testTag(plusTestTag) else it }
+            ) {
+                Icon(
+                    imageVector = CleanSupplyIcons.Add,
+                    contentDescription = "Increase quantity",
+                    tint = if (canIncrement) colors.primary else colors.disabled
+                )
+            }
+        }
+    }
 }
 
 @Composable
@@ -250,6 +330,7 @@ fun SectionHeader(
     modifier: Modifier = Modifier
 ) {
     val colors = CleanSupplyTheme.colors
+    val shapes = CleanSupplyTheme.shapes
     val type = CleanSupplyTheme.typography
     val spacing = CleanSupplyTheme.spacing
 
@@ -258,22 +339,34 @@ fun SectionHeader(
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            Text(
-                text = title,
-                style = type.titleLarge,
-                color = colors.textPrimary,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
+        Row(
+            modifier = Modifier.weight(1f),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(spacing.xs)
+        ) {
+            Box(
+                modifier = Modifier
+                    .width(4.dp)
+                    .height(if (subtitle.isNullOrBlank()) 20.dp else 32.dp)
+                    .background(colors.primary, shapes.pill)
             )
-            if (!subtitle.isNullOrBlank()) {
+            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 Text(
-                    text = subtitle,
-                    style = type.bodySmall,
-                    color = colors.textSecondary,
+                    text = title,
+                    style = type.titleLarge,
+                    color = colors.textPrimary,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
+                if (!subtitle.isNullOrBlank()) {
+                    Text(
+                        text = subtitle,
+                        style = type.bodySmall,
+                        color = colors.textSecondary,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
             }
         }
         if (actionLabel != null && onAction != null) {
@@ -283,7 +376,12 @@ fun SectionHeader(
             ) {
                 Text(actionLabel, style = type.labelLarge, color = colors.primary)
                 Spacer(Modifier.width(spacing.xxs))
-                Icon(CleanSupplyIcons.Forward, contentDescription = null, tint = colors.primary, modifier = Modifier.size(16.dp))
+                Icon(
+                    imageVector = CleanSupplyIcons.Forward,
+                    contentDescription = null,
+                    tint = colors.primary,
+                    modifier = Modifier.size(16.dp)
+                )
             }
         }
     }
@@ -314,7 +412,7 @@ fun SegmentVerificationBadge(profile: UserProfile?, modifier: Modifier = Modifie
         modifier = modifier,
         color = bg,
         shape = shapes.pill,
-        border = BorderStroke(1.dp, fg.copy(alpha = 0.22f))
+        border = BorderStroke(1.dp, fg.copy(alpha = 0.24f))
     ) {
         Row(
             modifier = Modifier.padding(horizontal = spacing.sm, vertical = spacing.xxs),
@@ -354,7 +452,7 @@ fun OrderStatusChip(status: OrderStatus, modifier: Modifier = Modifier) {
         modifier = modifier,
         color = bg,
         shape = shapes.pill,
-        border = BorderStroke(1.dp, fg.copy(alpha = 0.2f))
+        border = BorderStroke(1.dp, fg.copy(alpha = 0.22f))
     ) {
         Row(
             modifier = Modifier.padding(horizontal = spacing.sm, vertical = spacing.xxs),

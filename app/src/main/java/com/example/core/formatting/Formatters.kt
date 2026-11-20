@@ -7,6 +7,11 @@ import java.text.DateFormat
 import java.util.Locale
 
 object Formatters {
+    private val arabicEgyptLocale: Locale = Locale.Builder()
+        .setLanguage("ar")
+        .setRegion("EG")
+        .build()
+
     fun number(amount: Double): String =
         if (amount % 1.0 == 0.0) {
             String.format(Locale.US, "%.0f", amount)
@@ -18,7 +23,7 @@ object Formatters {
 
     fun timestamp(ts: Timestamp?, isArabic: Boolean): String {
         if (ts == null) return ""
-        val locale = if (isArabic) Locale("ar", "EG") else Locale.US
+        val locale = if (isArabic) arabicEgyptLocale else Locale.US
         return DateFormat.getDateTimeInstance(DateFormat.MEDIUM, DateFormat.SHORT, locale)
             .format(ts.toDate())
     }

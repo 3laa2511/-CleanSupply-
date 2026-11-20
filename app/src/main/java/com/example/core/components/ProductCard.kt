@@ -78,7 +78,7 @@ fun ProductGridCard(
         onClick = onCardClick,
         shape = shapes.card,
         colors = CardDefaults.cardColors(containerColor = colors.surface),
-        elevation = CardDefaults.cardElevation(defaultElevation = CleanSupplyTheme.elevations.none),
+        elevation = CardDefaults.cardElevation(defaultElevation = CleanSupplyTheme.elevations.subtle),
         border = BorderStroke(1.dp, colors.outline),
         modifier = modifier
             .fillMaxWidth()
@@ -91,6 +91,7 @@ fun ProductGridCard(
                     .aspectRatio(4f / 3f)
                     .padding(spacing.xs)
                     .clip(shapes.smallComponent)
+                    .background(colors.surfaceVariant)
             ) {
                 FastProductImage(
                     drawableRes = drawableRes,
@@ -100,7 +101,8 @@ fun ProductGridCard(
                 if (product.bulkDiscountPercent > 0L) {
                     Surface(
                         color = colors.discountContainer,
-                        shape = shapes.smallComponent,
+                        shape = shapes.pill,
+                        border = BorderStroke(0.8.dp, colors.discount.copy(alpha = 0.28f)),
                         modifier = Modifier
                             .align(Alignment.TopStart)
                             .padding(spacing.xs)
@@ -128,8 +130,8 @@ fun ProductGridCard(
                 }
                 if (product.cartonSize > 1L) {
                     Surface(
-                        color = colors.brandSlate.copy(alpha = 0.88f),
-                        shape = shapes.smallComponent,
+                        color = colors.brandSlate.copy(alpha = 0.90f),
+                        shape = shapes.pill,
                         modifier = Modifier
                             .align(Alignment.TopEnd)
                             .padding(spacing.xs)
@@ -139,7 +141,7 @@ fun ProductGridCard(
                             style = type.numericSmall,
                             color = colors.onPrimary,
                             maxLines = 1,
-                            modifier = Modifier.padding(horizontal = 7.dp, vertical = 3.dp)
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
                         )
                     }
                 }
@@ -159,22 +161,26 @@ fun ProductGridCard(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(
-                        text = product.brand,
-                        style = type.labelSmall,
-                        color = colors.primary,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.weight(1f)
-                    )
-                    Spacer(Modifier.width(spacing.xxs))
+                    Surface(
+                        color = colors.primaryContainer.copy(alpha = 0.65f),
+                        shape = shapes.smallComponent
+                    ) {
+                        Text(
+                            text = product.brand,
+                            style = type.labelSmall,
+                            color = colors.onPrimaryContainer,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                        )
+                    }
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(spacing.xxs)
                     ) {
                         Box(
                             modifier = Modifier
-                                .size(6.dp)
+                                .size(7.dp)
                                 .background(if (inStock) colors.success else colors.outOfStock, CircleShape)
                         )
                         if (!inStock) {
@@ -314,6 +320,7 @@ fun ProductListRowCard(
         onClick = onCardClick,
         shape = shapes.card,
         colors = CardDefaults.cardColors(containerColor = colors.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = CleanSupplyTheme.elevations.subtle),
         border = BorderStroke(1.dp, colors.outline),
         modifier = modifier
             .fillMaxWidth()
@@ -328,8 +335,9 @@ fun ProductListRowCard(
         ) {
             Box(
                 modifier = Modifier
-                    .size(88.dp)
+                    .size(92.dp)
                     .clip(shapes.smallComponent)
+                    .background(colors.surfaceVariant)
             ) {
                 FastProductImage(
                     drawableRes = drawableRes,
@@ -339,7 +347,7 @@ fun ProductListRowCard(
                 if (product.bulkDiscountPercent > 0L) {
                     Surface(
                         color = colors.discountContainer,
-                        shape = shapes.smallComponent,
+                        shape = shapes.pill,
                         modifier = Modifier
                             .align(Alignment.TopStart)
                             .padding(spacing.xxs)
@@ -348,7 +356,7 @@ fun ProductListRowCard(
                             text = "-${product.bulkDiscountPercent}%",
                             style = type.caption,
                             color = colors.discount,
-                            modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp)
+                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                         )
                     }
                 }
@@ -358,12 +366,30 @@ fun ProductListRowCard(
                 modifier = Modifier.weight(1f),
                 verticalArrangement = Arrangement.spacedBy(spacing.xxs)
             ) {
-                Text(
-                    text = product.brand,
-                    style = type.labelSmall,
-                    color = colors.primary,
-                    maxLines = 1
-                )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(spacing.xs)
+                ) {
+                    Text(
+                        text = product.brand,
+                        style = type.labelSmall,
+                        color = colors.primary,
+                        maxLines = 1
+                    )
+                    if (product.cartonSize > 1L) {
+                        Surface(
+                            color = colors.surfaceVariant,
+                            shape = shapes.smallComponent
+                        ) {
+                            Text(
+                                text = "${product.cartonSize}x",
+                                style = type.caption,
+                                color = colors.textSecondary,
+                                modifier = Modifier.padding(horizontal = 5.dp, vertical = 1.dp)
+                            )
+                        }
+                    }
+                }
                 Text(
                     text = product.localizedName(s.isArabic),
                     style = type.titleSmall,

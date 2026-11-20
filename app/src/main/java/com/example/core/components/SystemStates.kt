@@ -37,6 +37,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.example.core.designsystem.CleanSupplyIcons
@@ -113,7 +114,7 @@ fun ProductCardSkeleton(modifier: Modifier = Modifier) {
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(44.dp)
+                        .height(48.dp)
                         .clip(shapes.button)
                         .background(brush)
                 )
@@ -221,16 +222,17 @@ fun EmptyStateView(
             verticalArrangement = Arrangement.spacedBy(spacing.sm)
         ) {
             Surface(
-                color = colors.primaryContainer,
+                color = colors.primaryContainer.copy(alpha = 0.72f),
                 shape = shapes.largeSurface,
-                modifier = Modifier.size(76.dp)
+                border = BorderStroke(1.dp, colors.primary.copy(alpha = 0.18f)),
+                modifier = Modifier.size(80.dp)
             ) {
                 Box(contentAlignment = Alignment.Center) {
                     Icon(
                         imageVector = icon,
                         contentDescription = title,
                         tint = colors.primary,
-                        modifier = Modifier.size(36.dp)
+                        modifier = Modifier.size(38.dp)
                     )
                 }
             }
@@ -262,7 +264,8 @@ fun EmptyStateView(
 fun ErrorStateView(
     message: String,
     onRetry: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    retryTestTag: String? = null
 ) {
     val s = LocalAppStrings.current
     val colors = CleanSupplyTheme.colors
@@ -283,7 +286,8 @@ fun ErrorStateView(
             Surface(
                 color = colors.errorContainer,
                 shape = shapes.largeSurface,
-                modifier = Modifier.size(72.dp)
+                border = BorderStroke(1.dp, colors.error.copy(alpha = 0.25f)),
+                modifier = Modifier.size(76.dp)
             ) {
                 Box(contentAlignment = Alignment.Center) {
                     Icon(
@@ -304,7 +308,9 @@ fun ErrorStateView(
                 onClick = onRetry,
                 shape = shapes.button,
                 border = BorderStroke(1.dp, colors.outlineStrong),
-                modifier = Modifier.height(spacing.minTouchTarget)
+                modifier = Modifier
+                    .height(spacing.minTouchTarget)
+                    .let { if (retryTestTag != null) it.testTag(retryTestTag) else it }
             ) {
                 Text(s.retryBtn, style = type.labelLarge, color = colors.primary)
             }

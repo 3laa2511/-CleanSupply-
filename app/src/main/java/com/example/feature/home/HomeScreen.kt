@@ -30,6 +30,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -69,6 +72,7 @@ fun HomeScreen(
     onQuickAdd: (Product) -> Unit,
     onReorder: (String) -> Unit,
     onOpenAllCatalog: () -> Unit,
+    onOpenOrders: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val s = LocalAppStrings.current
@@ -80,6 +84,9 @@ fun HomeScreen(
     val featuredRows = remember(products) {
         val featured = products.filter { it.featured }.ifEmpty { products.take(4) }
         featured.chunked(2)
+    }
+    val countsByCat = remember(products) {
+        products.groupingBy { it.categoryId }.eachCount()
     }
 
     PullToRefreshBox(
@@ -94,11 +101,11 @@ fun HomeScreen(
             contentPadding = PaddingValues(spacing.md),
             verticalArrangement = Arrangement.spacedBy(spacing.sectionGap)
         ) {
-            // Greeting, Delivery Context & Account Tier Header
+            // Greeting, Delivery Context, Loyalty Pill & Search Bar
             item(key = "home_greeting", contentType = "header") {
                 Surface(
                     color = colors.surface,
-                    shape = shapes.card,
+                    shape = shapes.largeSurface,
                     border = BorderStroke(1.dp, colors.outline),
                     modifier = Modifier.fillMaxWidth()
                 ) {
@@ -118,7 +125,7 @@ fun HomeScreen(
                             ) {
                                 Box(
                                     modifier = Modifier
-                                        .size(40.dp)
+                                        .size(44.dp)
                                         .background(colors.primaryContainer, shapes.button),
                                     contentAlignment = Alignment.Center
                                 ) {
@@ -126,12 +133,13 @@ fun HomeScreen(
                                         imageVector = CleanSupplyIcons.NavAccountActive,
                                         contentDescription = null,
                                         tint = colors.primary,
-                                        modifier = Modifier.size(20.dp)
+                                        modifier = Modifier.size(22.dp)
                                     )
                                 }
-                                Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                    val userName = profile?.displayName?.takeIf { it.isNotBlank() }
                                     Text(
-                                        text = profile?.displayName?.takeIf { it.isNotBlank() } ?: s.guestBadge,
+                                        text = if (userName != null) "${s.welcomePrefix}، $userName" else s.guestBadge,
                                         style = type.titleMedium,
                                         color = colors.textPrimary,
                                         maxLines = 1,
@@ -153,7 +161,7 @@ fun HomeScreen(
                                 ) {
                                     Icon(CleanSupplyIcons.Loyalty, contentDescription = null, tint = colors.warning, modifier = Modifier.size(15.dp))
                                     Text(
-                                        text = "${profile?.loyaltyPoints ?: 0L} pts",
+                                        text = "${profile?.loyaltyPoints ?: 0L} ${s.pointsUnit}",
                                         style = type.numericSmall,
                                         color = colors.warning,
                                         maxLines = 1,
@@ -164,18 +172,43 @@ fun HomeScreen(
                         }
 
                         if (activeZone != null) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(spacing.xs)
+                            Surface(
+                                color = colors.surfaceVariant,
+                                shape = shapes.button,
+                                border = BorderStroke(1.dp, colors.outline),
+                                modifier = Modifier.fillMaxWidth()
                             ) {
-                                Icon(CleanSupplyIcons.Location, contentDescription = null, tint = colors.primary, modifier = Modifier.size(16.dp))
-                                Text(
-                                    text = activeZone.localizedName(s.isArabic),
-                                    style = type.caption,
-                                    color = colors.textSecondary,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
-                                )
+                                Row(
+                                    modifier = Modifier.padding(horizontal = spacing.sm, vertical = spacing.xs),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(spacing.xs),
+                                        modifier = Modifier.weight(1f)
+                                    ) {
+                                        Icon(CleanSupplyIcons.Location, contentDescription = null, tint = colors.primary, modifier = Modifier.size(16.dp))
+                                        Text(
+                                            text = "${s.deliveryZoneLabel}: ${activeZone.localizedName(s.isArabic)}",
+                                            style = type.labelMedium,
+                                            color = colors.textPrimary,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis
+                                        )
+                                    }
+                                    Surface(
+                                        color = colors.primaryContainer,
+                                        shape = shapes.pill
+                                    ) {
+                                        Text(
+                                            text = "${activeZone.estimatedHours} ${s.hoursShort}",
+                                            style = type.numericSmall,
+                                            color = colors.onPrimaryContainer,
+                                            modifier = Modifier.padding(horizontal = spacing.xs, vertical = 2.dp)
+                                        )
+                                    }
+                                }
                             }
                         }
 
@@ -184,7 +217,7 @@ fun HomeScreen(
                             onClick = onOpenSearch,
                             shape = shapes.input,
                             color = colors.surfaceVariant,
-                            border = BorderStroke(1.dp, colors.outline),
+                            border = BorderStroke(1.dp, colors.outlineStrong),
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .height(spacing.minTouchTarget)
@@ -201,15 +234,17 @@ fun HomeScreen(
                                     style = type.bodyMedium,
                                     color = colors.textMuted,
                                     maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
+                                    overflow = TextOverflow.Ellipsis,
+                                    modifier = Modifier.weight(1f)
                                 )
+                                Icon(CleanSupplyIcons.Tune, contentDescription = null, tint = colors.textSecondary, modifier = Modifier.size(18.dp))
                             }
                         }
                     }
                 }
             }
 
-            // Editorial Commercial Hero Block
+            // Editorial Commercial Hero Block with Gradient Scrim
             item(key = "home_hero", contentType = "hero") {
                 Card(
                     shape = shapes.largeSurface,
@@ -220,15 +255,25 @@ fun HomeScreen(
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .height(168.dp)
+                                .height(176.dp)
                         ) {
                             FastProductImage(
                                 drawableRes = R.drawable.img_hero_cleansupply,
                                 contentDescription = s.heroTitle,
                                 modifier = Modifier.fillMaxSize()
                             )
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .background(
+                                        Brush.verticalGradient(
+                                            listOf(Color.Transparent, colors.brandSlate.copy(alpha = 0.92f))
+                                        )
+                                    )
+                            )
                             Surface(
-                                color = colors.brandSlate.copy(alpha = 0.90f),
+                                color = colors.brandSlate.copy(alpha = 0.88f),
+                                border = BorderStroke(1.dp, colors.heroAccent.copy(alpha = 0.45f)),
                                 shape = shapes.pill,
                                 modifier = Modifier
                                     .align(Alignment.TopStart)
@@ -239,13 +284,17 @@ fun HomeScreen(
                                     verticalAlignment = Alignment.CenterVertically,
                                     horizontalArrangement = Arrangement.spacedBy(spacing.xxs)
                                 ) {
-                                    Icon(CleanSupplyIcons.Verified, contentDescription = null, tint = colors.primary, modifier = Modifier.size(14.dp))
+                                    Icon(CleanSupplyIcons.ShieldVerified, contentDescription = null, tint = colors.heroAccent, modifier = Modifier.size(14.dp))
                                     Text(s.heroBadge, style = type.labelSmall, color = colors.onPrimary)
                                 }
                             }
                         }
                         Column(
-                            modifier = Modifier.padding(spacing.md),
+                            modifier = Modifier
+                                .background(
+                                    Brush.verticalGradient(listOf(colors.brandSlate, colors.brandSlateSurface))
+                                )
+                                .padding(horizontal = spacing.md, vertical = spacing.md),
                             verticalArrangement = Arrangement.spacedBy(spacing.xs)
                         ) {
                             Text(
@@ -258,7 +307,7 @@ fun HomeScreen(
                             Text(
                                 text = s.heroSubtitle,
                                 style = type.bodySmall,
-                                color = colors.onPrimary.copy(alpha = 0.80f),
+                                color = colors.onPrimary.copy(alpha = 0.82f),
                                 maxLines = 2,
                                 overflow = TextOverflow.Ellipsis
                             )
@@ -267,10 +316,44 @@ fun HomeScreen(
                                 text = s.exploreBulkCta,
                                 icon = CleanSupplyIcons.BulkDeal,
                                 testTag = "home_explore_bulk_cta",
-                                onClick = onExploreBulkDeals
+                                onClick = onExploreBulkDeals,
+                                modifier = Modifier.fillMaxWidth()
                             )
                         }
                     }
+                }
+            }
+
+            // Commercial Quick Actions Strip
+            item(key = "home_quick_actions", contentType = "quick_actions") {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(spacing.xs)
+                ) {
+                    QuickActionTile(
+                        icon = CleanSupplyIcons.NavCategoriesActive,
+                        label = s.navCategories,
+                        onClick = onOpenAllCategories,
+                        modifier = Modifier.weight(1f)
+                    )
+                    QuickActionTile(
+                        icon = CleanSupplyIcons.BulkDeal,
+                        label = s.categoryBulkTag,
+                        onClick = onExploreBulkDeals,
+                        modifier = Modifier.weight(1f)
+                    )
+                    QuickActionTile(
+                        icon = CleanSupplyIcons.AllCategories,
+                        label = s.quickActionCatalog,
+                        onClick = onOpenAllCatalog,
+                        modifier = Modifier.weight(1f)
+                    )
+                    QuickActionTile(
+                        icon = CleanSupplyIcons.Receipt,
+                        label = s.quickActionOrders,
+                        onClick = onOpenOrders,
+                        modifier = Modifier.weight(1f)
+                    )
                 }
             }
 
@@ -298,11 +381,11 @@ fun HomeScreen(
                             ) {
                                 Box(
                                     modifier = Modifier
-                                        .size(38.dp)
+                                        .size(40.dp)
                                         .background(colors.primary.copy(alpha = 0.14f), shapes.button),
                                     contentAlignment = Alignment.Center
                                 ) {
-                                    Icon(CleanSupplyIcons.Reorder, contentDescription = null, tint = colors.primary, modifier = Modifier.size(18.dp))
+                                    Icon(CleanSupplyIcons.Reorder, contentDescription = null, tint = colors.primary, modifier = Modifier.size(20.dp))
                                 }
                                 Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                                     Text(s.quickReorderTitle, style = type.labelMedium, color = colors.onPrimaryContainer)
@@ -335,12 +418,13 @@ fun HomeScreen(
                     )
                     LazyRow(horizontalArrangement = Arrangement.spacedBy(spacing.sm)) {
                         items(categories, key = { it.id }, contentType = { "category_chip" }) { cat ->
+                            val count = countsByCat[cat.id] ?: 0
                             Surface(
                                 shape = shapes.card,
                                 color = colors.surface,
                                 border = BorderStroke(1.dp, colors.outline),
                                 modifier = Modifier
-                                    .width(136.dp)
+                                    .width(146.dp)
                                     .clip(shapes.card)
                                     .clickable { onSelectCategory(cat.id) }
                                     .testTag("home_category_${cat.id}")
@@ -349,15 +433,24 @@ fun HomeScreen(
                                     Box(
                                         modifier = Modifier
                                             .fillMaxWidth()
-                                            .height(78.dp)
+                                            .height(84.dp)
                                     ) {
                                         FastProductImage(
                                             drawableRes = Formatters.productDrawable(cat.iconKey),
                                             contentDescription = cat.localizedName(s.isArabic),
                                             modifier = Modifier.fillMaxSize()
                                         )
+                                        Box(
+                                            modifier = Modifier
+                                                .fillMaxSize()
+                                                .background(
+                                                    Brush.verticalGradient(
+                                                        listOf(Color.Transparent, colors.scrim.copy(alpha = 0.55f))
+                                                    )
+                                                )
+                                        )
                                         Surface(
-                                            color = colors.surface.copy(alpha = 0.92f),
+                                            color = colors.surface.copy(alpha = 0.94f),
                                             shape = shapes.smallComponent,
                                             modifier = Modifier
                                                 .align(Alignment.TopStart)
@@ -372,6 +465,20 @@ fun HomeScreen(
                                                     modifier = Modifier.size(16.dp)
                                                 )
                                             }
+                                        }
+                                        Surface(
+                                            color = colors.brandSlate.copy(alpha = 0.85f),
+                                            shape = shapes.pill,
+                                            modifier = Modifier
+                                                .align(Alignment.BottomEnd)
+                                                .padding(spacing.xs)
+                                        ) {
+                                            Text(
+                                                text = "$count ${s.resultsCountLabel}",
+                                                style = type.caption,
+                                                color = colors.onPrimary,
+                                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                            )
                                         }
                                     }
                                     Text(
@@ -436,7 +543,7 @@ fun HomeScreen(
                                     shape = shapes.card,
                                     color = colors.surface,
                                     border = BorderStroke(1.dp, colors.outline),
-                                    modifier = Modifier.width(152.dp)
+                                    modifier = Modifier.width(156.dp)
                                 ) {
                                     Column(
                                         modifier = Modifier.padding(spacing.xs),
@@ -447,7 +554,7 @@ fun HomeScreen(
                                             contentDescription = prod.localizedName(s.isArabic),
                                             modifier = Modifier
                                                 .fillMaxWidth()
-                                                .height(82.dp)
+                                                .height(84.dp)
                                                 .clip(shapes.smallComponent)
                                         )
                                         Text(
@@ -473,11 +580,13 @@ fun HomeScreen(
                 }
             }
 
-            // Institutional & Promo Info Card
+            // Actionable Institutional & Promo Card
             item(key = "home_promo_info", contentType = "banner") {
                 Surface(
+                    onClick = onExploreBulkDeals,
                     color = colors.brandSlateSurface,
-                    shape = shapes.card,
+                    shape = shapes.largeSurface,
+                    border = BorderStroke(1.dp, colors.heroAccent.copy(alpha = 0.25f)),
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Row(
@@ -487,19 +596,66 @@ fun HomeScreen(
                     ) {
                         Box(
                             modifier = Modifier
-                                .size(40.dp)
-                                .background(colors.primary.copy(alpha = 0.22f), shapes.button),
+                                .size(44.dp)
+                                .background(colors.heroAccent.copy(alpha = 0.18f), shapes.button),
                             contentAlignment = Alignment.Center
                         ) {
-                            Icon(CleanSupplyIcons.Offer, contentDescription = null, tint = colors.primary, modifier = Modifier.size(20.dp))
+                            Icon(CleanSupplyIcons.Offer, contentDescription = null, tint = colors.heroAccent, modifier = Modifier.size(22.dp))
                         }
                         Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                             Text(s.promoBannerTitle, style = type.titleSmall, color = colors.onPrimary)
-                            Text(s.promoBannerSub, style = type.caption, color = colors.onPrimary.copy(alpha = 0.78f))
+                            Text(s.promoBannerSub, style = type.caption, color = colors.onPrimary.copy(alpha = 0.80f))
                         }
+                        Icon(CleanSupplyIcons.Forward, contentDescription = null, tint = colors.heroAccent)
                     }
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun QuickActionTile(
+    icon: ImageVector,
+    label: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val colors = CleanSupplyTheme.colors
+    val shapes = CleanSupplyTheme.shapes
+    val spacing = CleanSupplyTheme.spacing
+    val type = CleanSupplyTheme.typography
+
+    Surface(
+        onClick = onClick,
+        shape = shapes.card,
+        color = colors.surface,
+        border = BorderStroke(1.dp, colors.outline),
+        modifier = modifier.height(78.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = spacing.xs, vertical = spacing.xs),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(32.dp)
+                    .background(colors.primaryContainer, shapes.smallComponent),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(icon, contentDescription = label, tint = colors.primary, modifier = Modifier.size(18.dp))
+            }
+            Spacer(Modifier.height(4.dp))
+            Text(
+                text = label,
+                style = type.labelSmall,
+                color = colors.textPrimary,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
         }
     }
 }

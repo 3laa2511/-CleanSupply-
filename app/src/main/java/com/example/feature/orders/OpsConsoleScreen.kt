@@ -13,6 +13,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -22,6 +23,7 @@ import androidx.compose.ui.unit.dp
 import com.example.core.components.CleanSupplyPrimaryButton
 import com.example.core.components.CleanSupplySecondaryButton
 import com.example.core.components.OrderStatusChip
+import com.example.core.components.SectionHeader
 import com.example.core.designsystem.CleanSupplyIcons
 import com.example.core.designsystem.CleanSupplyTheme
 import com.example.data.model.ApprovedTier
@@ -50,6 +52,7 @@ fun OperationsConsoleTab(
     val shapes = CleanSupplyTheme.shapes
     val spacing = CleanSupplyTheme.spacing
     val type = CleanSupplyTheme.typography
+    val openTickets = tickets.filter { it.status != "RESOLVED" }
 
     LazyColumn(
         modifier = modifier.fillMaxSize(),
@@ -58,7 +61,7 @@ fun OperationsConsoleTab(
     ) {
         item(key = "ops_header") {
             Card(
-                shape = shapes.card,
+                shape = shapes.largeSurface,
                 colors = CardDefaults.cardColors(containerColor = colors.brandSlate)
             ) {
                 Column(
@@ -69,8 +72,8 @@ fun OperationsConsoleTab(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(spacing.xs)
                     ) {
-                        Icon(CleanSupplyIcons.Admin, contentDescription = null, tint = colors.primaryContainer)
-                        Text(s.opsConsoleTitle, style = type.titleSmall, color = colors.onPrimary)
+                        Icon(CleanSupplyIcons.Admin, contentDescription = null, tint = colors.heroAccent)
+                        Text(s.opsConsoleTitle, style = type.titleMedium, color = colors.onPrimary)
                     }
                     CleanSupplyPrimaryButton(
                         text = s.seedCatalogBtn,
@@ -81,93 +84,123 @@ fun OperationsConsoleTab(
             }
         }
 
-        items(adminUsers, key = { it.userId }) { u ->
-            Card(
-                shape = shapes.card,
-                border = BorderStroke(1.dp, colors.outline),
-                colors = CardDefaults.cardColors(containerColor = colors.surface)
-            ) {
-                Column(
-                    modifier = Modifier.padding(spacing.md),
-                    verticalArrangement = Arrangement.spacedBy(spacing.xs)
-                ) {
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                        Text("${u.displayName} (${u.segment})", style = type.titleSmall, color = colors.textPrimary)
-                        Text(u.verificationStatus, style = type.labelSmall, color = colors.primary)
-                    }
-                    Row(horizontalArrangement = Arrangement.spacedBy(spacing.xs)) {
-                        CleanSupplyPrimaryButton(
-                            text = "Wholesale A",
-                            onClick = { onApproveUserTier(u.userId, CustomerSegment.WHOLESALE, ApprovedTier.TIER_A, 25000.0) },
-                            modifier = Modifier.weight(1f)
-                        )
-                        CleanSupplyPrimaryButton(
-                            text = "B2B Ent.",
-                            onClick = { onApproveUserTier(u.userId, CustomerSegment.BUSINESS, ApprovedTier.ENTERPRISE, 75000.0) },
-                            modifier = Modifier.weight(1f)
-                        )
-                    }
-                }
+        if (adminUsers.isNotEmpty()) {
+            item(key = "ops_users_header") {
+                SectionHeader(title = s.opsUsersTitle)
             }
-        }
-
-        items(orders.take(10), key = { it.id }) { order ->
-            Card(
-                shape = shapes.card,
-                border = BorderStroke(1.dp, colors.outline),
-                colors = CardDefaults.cardColors(containerColor = colors.surface)
-            ) {
-                Column(
-                    modifier = Modifier.padding(spacing.md),
-                    verticalArrangement = Arrangement.spacedBy(spacing.xs)
+            items(adminUsers, key = { it.userId }) { u ->
+                Card(
+                    shape = shapes.card,
+                    border = BorderStroke(1.dp, colors.outline),
+                    colors = CardDefaults.cardColors(containerColor = colors.surface)
                 ) {
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                        Text("${order.orderNumber} • ${order.customerName}", style = type.titleSmall, color = colors.textPrimary)
-                        OrderStatusChip(order.statusEnum())
-                    }
-                    Row(horizontalArrangement = Arrangement.spacedBy(spacing.xs)) {
-                        CleanSupplySecondaryButton(
-                            text = s.advanceOrderBtn,
-                            onClick = { onAdvanceOrder(order) },
-                            modifier = Modifier.weight(1f)
-                        )
-                        if (order.fulfillmentEnum() == FulfillmentType.INTERNAL_FLEET) {
+                    Column(
+                        modifier = Modifier.padding(spacing.md),
+                        verticalArrangement = Arrangement.spacedBy(spacing.xs)
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text("${u.displayName} (${u.segment})", style = type.titleSmall, color = colors.textPrimary)
+                            Surface(color = colors.primaryContainer, shape = shapes.pill) {
+                                Text(
+                                    text = u.verificationStatus,
+                                    style = type.labelSmall,
+                                    color = colors.onPrimaryContainer,
+                                    modifier = Modifier.padding(horizontal = spacing.xs, vertical = 2.dp)
+                                )
+                            }
+                        }
+                        Row(horizontalArrangement = Arrangement.spacedBy(spacing.xs)) {
                             CleanSupplyPrimaryButton(
-                                text = s.moveDriverBtn,
-                                icon = CleanSupplyIcons.Shipping,
-                                onClick = { onStepDriver(order) },
+                                text = s.approveWholesaleABtn,
+                                onClick = { onApproveUserTier(u.userId, CustomerSegment.WHOLESALE, ApprovedTier.TIER_A, 25000.0) },
+                                modifier = Modifier.weight(1f)
+                            )
+                            CleanSupplyPrimaryButton(
+                                text = s.approveBusinessEntBtn,
+                                onClick = { onApproveUserTier(u.userId, CustomerSegment.BUSINESS, ApprovedTier.ENTERPRISE, 75000.0) },
                                 modifier = Modifier.weight(1f)
                             )
                         }
                     }
-                    TextButton(onClick = { onToggleFulfillment(order) }) {
-                        Text("${s.switchCarrierBtn}: ${order.fulfillmentType}", style = type.labelSmall, color = colors.primary)
+                }
+            }
+        }
+
+        if (orders.isNotEmpty()) {
+            item(key = "ops_orders_header") {
+                SectionHeader(title = s.opsOrdersTitle)
+            }
+            items(orders.take(10), key = { it.id }) { order ->
+                Card(
+                    shape = shapes.card,
+                    border = BorderStroke(1.dp, colors.outline),
+                    colors = CardDefaults.cardColors(containerColor = colors.surface)
+                ) {
+                    Column(
+                        modifier = Modifier.padding(spacing.md),
+                        verticalArrangement = Arrangement.spacedBy(spacing.xs)
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text("${order.orderNumber} • ${order.customerName}", style = type.titleSmall, color = colors.textPrimary)
+                            OrderStatusChip(order.statusEnum())
+                        }
+                        Row(horizontalArrangement = Arrangement.spacedBy(spacing.xs)) {
+                            CleanSupplySecondaryButton(
+                                text = s.advanceOrderBtn,
+                                onClick = { onAdvanceOrder(order) },
+                                modifier = Modifier.weight(1f)
+                            )
+                            if (order.fulfillmentEnum() == FulfillmentType.INTERNAL_FLEET) {
+                                CleanSupplyPrimaryButton(
+                                    text = s.moveDriverBtn,
+                                    icon = CleanSupplyIcons.Shipping,
+                                    onClick = { onStepDriver(order) },
+                                    modifier = Modifier.weight(1f)
+                                )
+                            }
+                        }
+                        TextButton(onClick = { onToggleFulfillment(order) }) {
+                            Text("${s.switchCarrierBtn}: ${order.fulfillmentType}", style = type.labelSmall, color = colors.primary)
+                        }
                     }
                 }
             }
         }
 
-        items(tickets.filter { it.status != "RESOLVED" }, key = { it.id }) { t ->
-            Card(
-                shape = shapes.card,
-                border = BorderStroke(1.dp, colors.outline),
-                colors = CardDefaults.cardColors(containerColor = colors.surface)
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(spacing.md),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+        if (openTickets.isNotEmpty()) {
+            item(key = "ops_tickets_header") {
+                SectionHeader(title = s.opsTicketsTitle)
+            }
+            items(openTickets, key = { it.id }) { t ->
+                Card(
+                    shape = shapes.card,
+                    border = BorderStroke(1.dp, colors.outline),
+                    colors = CardDefaults.cardColors(containerColor = colors.surface)
                 ) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(t.subject, style = type.titleSmall, color = colors.textPrimary)
-                        Text(t.message, style = type.bodySmall, color = colors.textSecondary)
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(spacing.md),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(t.subject, style = type.titleSmall, color = colors.textPrimary)
+                            Text(t.message, style = type.bodySmall, color = colors.textSecondary)
+                        }
+                        CleanSupplyPrimaryButton(
+                            text = s.resolveTicketBtn,
+                            onClick = { onResolveTicket(t.id, s.resolvedReplyDefault) }
+                        )
                     }
-                    CleanSupplyPrimaryButton(
-                        text = if (s.isArabic) "إغلاق" else "Resolve",
-                        onClick = { onResolveTicket(t.id, "Resolved by Operations Team") }
-                    )
                 }
             }
         }

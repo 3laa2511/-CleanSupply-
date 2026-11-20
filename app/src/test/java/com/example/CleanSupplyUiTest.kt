@@ -7,6 +7,8 @@ import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -31,6 +33,8 @@ import com.example.data.model.UserProfile
 import com.example.data.model.VerificationStatus
 import com.example.domain.PricingEngine
 import com.example.feature.account.AppearanceLanguageCard
+import com.example.feature.account.GuestAccountScreen
+import com.example.feature.auth.AuthScreen
 import com.example.feature.cart.CartScreen
 import com.example.feature.cart.CheckoutScreen
 import com.example.feature.catalog.CategoriesScreen
@@ -154,8 +158,8 @@ class CleanSupplyUiTest {
         composeRule.onNodeWithText("165 EGP", substring = true).assertDoesNotExist()
 
         composeRule.onNodeWithTag("pack_mode_carton").performScrollTo().performClick()
-        composeRule.onNodeWithTag("detail_qty_plus").performScrollTo().performClick()
-        composeRule.onNodeWithTag("detail_add_to_cart").performScrollTo().performClick()
+        composeRule.onNodeWithTag("detail_qty_plus").assertIsDisplayed().performClick()
+        composeRule.onNodeWithTag("detail_add_to_cart").assertIsDisplayed().performClick()
 
         assertEquals(PackMode.CARTON, addedPackMode)
         assertEquals(2L, addedQty)
@@ -315,8 +319,8 @@ class CleanSupplyUiTest {
             }
         }
 
-        composeRule.onNodeWithText(EnglishStrings.currentOrdersTitle).assertIsDisplayed()
-        composeRule.onNodeWithText(EnglishStrings.pastOrdersTitle).assertIsDisplayed()
+        composeRule.onAllNodesWithText(EnglishStrings.currentOrdersTitle).onFirst().assertIsDisplayed()
+        composeRule.onAllNodesWithText(EnglishStrings.pastOrdersTitle).onFirst().assertIsDisplayed()
         composeRule.onNodeWithTag("order_card_o1").assertIsDisplayed()
         composeRule.onNodeWithTag("order_card_o2").assertIsDisplayed()
     }
@@ -342,5 +346,175 @@ class CleanSupplyUiTest {
 
         assertEquals(AppLanguage.ENGLISH, selectedLang)
         assertEquals(AppThemeMode.DARK, selectedTheme)
+    }
+
+    @Test
+    fun `auth screen exposes google sign in, guest mode, and language toggle`() {
+        var guestClicked = false
+        var langToggled = false
+
+        composeRule.setContent {
+            CleanSupplyTheme(language = AppLanguage.ENGLISH, themeMode = AppThemeMode.LIGHT) {
+                AuthScreen(
+                    onToggleLanguage = { langToggled = true },
+                    onAuthSuccess = {},
+                    onContinueAsGuest = { guestClicked = true }
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag("google_sign_in_button").performScrollTo().assertIsDisplayed().assertIsEnabled()
+        composeRule.onNodeWithTag("auth_language_toggle").performScrollTo().performClick()
+        composeRule.onNodeWithTag("continue_as_guest_button").performScrollTo().performClick()
+
+        assertTrue(langToggled)
+        assertTrue(guestClicked)
+    }
+
+    @Test
+    fun `guest account screen renders sign in and welcome navigation controls`() {
+        var signInClicked = false
+        var backToWelcomeClicked = false
+
+        composeRule.setContent {
+            CleanSupplyTheme(language = AppLanguage.ENGLISH, themeMode = AppThemeMode.LIGHT) {
+                GuestAccountScreen(
+                    isSigningIn = false,
+                    currentLanguage = AppLanguage.ENGLISH,
+                    currentThemeMode = AppThemeMode.LIGHT,
+                    onSelectLanguage = {},
+                    onSelectThemeMode = {},
+                    onSignInWithGoogle = { signInClicked = true },
+                    onBackToWelcome = { backToWelcomeClicked = true }
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag("guest_account_sign_in_btn").performClick()
+        composeRule.onNodeWithTag("guest_back_to_auth_btn").performClick()
+
+        assertTrue(signInClicked)
+        assertTrue(backToWelcomeClicked)
+    }
+
+    @Test
+    fun `search empty state shows reset filters CTA and triggers callback`() {
+        var resetCalled = false
+
+        composeRule.setContent {
+            CleanSupplyTheme(language = AppLanguage.ENGLISH, themeMode = AppThemeMode.LIGHT) {
+                SearchCatalogScreen(
+                    categories = SeedData.defaultCategories,
+                    products = emptyList(),
+                    filters = CatalogFilters(searchQuery = "nonexistent-sku"),
+                    recentSearches = emptyList(),
+                    profile = null,
+                    onSearchChange = {},
+                    onCommitSearch = {},
+                    onClearRecentSearches = {},
+                    onSelectCategory = {},
+                    onToggleBulkOnly = {},
+                    onToggleInStockOnly = {},
+                    onSelectSort = {},
+                    onOpenProductDetail = {},
+                    onQuickAdd = {},
+                    onResetFilters = { resetCalled = true }
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag("search_reset_filters_btn").assertIsDisplayed().performClick()
+        assertTrue(resetCalled)
+    }
+
+    @Test
+    fun `cart screen stepper increments quantity and applies coupon`() {
+        val retailProfile = UserProfile(
+            userId = "u_retail",
+            segment = CustomerSegment.RETAIL.name,
+            verificationStatus = VerificationStatus.VERIFIED.name,
+            loyaltyPoints = 100L
+        )
+        val validSummary = PricingEngine.calculateCheckoutSummary(
+            cartItems = listOf(CartItem(id = "c1", productId = gelProduct.id, quantity = 1L, packMode = PackMode.UNIT.name)),
+            productsById = mapOf(gelProduct.id to gelProduct),
+            profile = retailProfile,
+            zone = cairoZone,
+            coupon = null,
+            redeemLoyalty = false
+        )
+        var updatedQty = 0L
+        var appliedCoupon = ""
+
+        composeRule.setContent {
+            CleanSupplyTheme(language = AppLanguage.ENGLISH, themeMode = AppThemeMode.LIGHT) {
+                CartScreen(
+                    summary = validSummary,
+                    profile = retailProfile,
+                    coupons = SeedData.defaultCoupons,
+                    draft = CheckoutDraft(),
+                    onBrowseCatalog = {},
+                    onUpdateCartQty = { _, qty, _ -> updatedQty = qty },
+                    onApplyCoupon = { appliedCoupon = it },
+                    onRemoveCoupon = {},
+                    onToggleLoyalty = {},
+                    onProceedToCheckout = {}
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag("cart_qty_plus_${gelProduct.id}").performClick()
+        assertEquals(2L, updatedQty)
+        composeRule.onNodeWithTag("coupon_input").performScrollTo().performTextInput("CLEAN10")
+        composeRule.onNodeWithTag("apply_coupon_btn").performClick()
+        assertEquals("CLEAN10", appliedCoupon)
+        composeRule.onNodeWithTag("proceed_to_checkout_btn").assertIsEnabled()
+    }
+
+    @Test
+    fun `orders error state displays error message and invokes retry callback`() {
+        var retried = false
+
+        composeRule.setContent {
+            CleanSupplyTheme(language = AppLanguage.ENGLISH, themeMode = AppThemeMode.LIGHT) {
+                OrdersListTab(
+                    ordersState = UiState.Error("Network unavailable"),
+                    onSelectOrder = {},
+                    onReorder = {},
+                    onRetry = { retried = true }
+                )
+            }
+        }
+
+        composeRule.onNodeWithText("Network unavailable").assertIsDisplayed()
+        composeRule.onNodeWithTag("orders_retry_btn").performClick()
+        assertTrue(retried)
+    }
+
+    @Test
+    fun `verified wholesale user sees bulk unlock indicator on product detail`() {
+        val wholesaleProfile = UserProfile(
+            userId = "u_wh",
+            displayName = "Al-Nour Market",
+            segment = CustomerSegment.WHOLESALE.name,
+            verificationStatus = VerificationStatus.VERIFIED.name
+        )
+
+        composeRule.setContent {
+            CleanSupplyTheme(language = AppLanguage.ENGLISH, themeMode = AppThemeMode.LIGHT) {
+                ProductDetailSheet(
+                    product = gelProduct,
+                    relatedProducts = listOf(relatedProduct),
+                    profile = wholesaleProfile,
+                    onDismiss = {},
+                    onSelectRelated = {},
+                    onAddToCart = { _, _ -> }
+                )
+            }
+        }
+
+        // Wholesale MOQ >= carton size starts in carton mode where 1 carton exceeds bulkMinQty or unlocks easily; verify B2B note is hidden
+        composeRule.onNodeWithText(EnglishStrings.b2bUpgradePricingNote).assertDoesNotExist()
+        composeRule.onNodeWithText(EnglishStrings.authorizedPricingTitle).performScrollTo().assertIsDisplayed()
     }
 }

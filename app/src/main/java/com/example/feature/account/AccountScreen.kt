@@ -17,21 +17,19 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.PrimaryTabRow
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -45,12 +43,15 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.example.core.components.CleanSupplyConfirmationDialog
 import com.example.core.components.CleanSupplyPrimaryButton
 import com.example.core.components.CleanSupplySecondaryButton
+import com.example.core.components.SectionHeader
 import com.example.core.components.SegmentVerificationBadge
 import com.example.core.designsystem.AppThemeMode
 import com.example.core.designsystem.CleanSupplyIcons
@@ -68,13 +69,17 @@ import com.example.data.model.TicketCategory
 import com.example.data.model.UserProfile
 import com.example.feature.cart.AddAddressDialog
 import com.example.feature.orders.OperationsConsoleTab
-import com.example.feature.orders.OrdersListTab
 import com.example.feature.orders.OrderTrackingDetailSheet
+import com.example.feature.orders.OrdersListTab
 import com.example.ui.i18n.AppLanguage
 import com.example.ui.i18n.LocalAppStrings
 import com.example.ui.viewmodel.UiState
 
-@OptIn(ExperimentalMaterial3Api::class)
+private data class AccountTabSpec(
+    val label: String,
+    val icon: ImageVector
+)
+
 @Composable
 fun AccountScreen(
     isAdmin: Boolean,
@@ -111,14 +116,16 @@ fun AccountScreen(
 ) {
     val s = LocalAppStrings.current
     val colors = CleanSupplyTheme.colors
+    val shapes = CleanSupplyTheme.shapes
+    val spacing = CleanSupplyTheme.spacing
     val type = CleanSupplyTheme.typography
 
     val tabs = remember(isAdmin, s) {
         buildList {
-            add(s.ordersTab)
-            add(s.loyaltySupportTab)
-            add(s.profileTab)
-            if (isAdmin) add(s.opsTab)
+            add(AccountTabSpec(s.ordersTab, CleanSupplyIcons.Receipt))
+            add(AccountTabSpec(s.loyaltySupportTab, CleanSupplyIcons.Loyalty))
+            add(AccountTabSpec(s.profileTab, CleanSupplyIcons.NavAccountActive))
+            if (isAdmin) add(AccountTabSpec(s.opsTab, CleanSupplyIcons.Admin))
         }
     }
     var selectedTab by rememberSaveable { mutableIntStateOf(0) }
@@ -128,27 +135,55 @@ fun AccountScreen(
     val inspectedOrder = orders.firstOrNull { it.id == selectedOrderId }
 
     Column(modifier = modifier.fillMaxSize()) {
-        PrimaryTabRow(
-            selectedTabIndex = selectedTab.coerceAtMost(tabs.lastIndex),
-            containerColor = colors.surface,
-            contentColor = colors.primary
+        // Scrollable Pill Tab Switcher (prevents cramped label wrapping on narrow Arabic/English viewports)
+        Surface(
+            color = colors.surface,
+            tonalElevation = 0.dp
         ) {
-            tabs.forEachIndexed { idx, title ->
-                Tab(
-                    selected = selectedTab == idx,
-                    onClick = { selectedTab = idx },
-                    selectedContentColor = colors.primary,
-                    unselectedContentColor = colors.textSecondary,
-                    text = {
-                        Text(
-                            text = title,
-                            style = type.labelLarge,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                    },
-                    modifier = Modifier.testTag("account_tab_$idx")
-                )
+            Column {
+                LazyRow(
+                    modifier = Modifier.fillMaxWidth(),
+                    contentPadding = PaddingValues(horizontal = spacing.md, vertical = spacing.xs),
+                    horizontalArrangement = Arrangement.spacedBy(spacing.xs)
+                ) {
+                    itemsIndexed(tabs) { idx, spec ->
+                        val selected = selectedTab == idx
+                        Surface(
+                            onClick = { selectedTab = idx },
+                            shape = shapes.pill,
+                            color = if (selected) colors.primaryContainer else colors.surfaceVariant,
+                            border = BorderStroke(
+                                width = if (selected) 1.5.dp else 1.dp,
+                                color = if (selected) colors.primary else colors.outline
+                            ),
+                            modifier = Modifier
+                                .height(spacing.minTouchTarget)
+                                .testTag("account_tab_$idx")
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = spacing.md),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(spacing.xs)
+                            ) {
+                                Icon(
+                                    imageVector = spec.icon,
+                                    contentDescription = null,
+                                    tint = if (selected) colors.primary else colors.textSecondary,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                                Text(
+                                    text = spec.label,
+                                    style = type.labelLarge,
+                                    color = if (selected) colors.onPrimaryContainer else colors.textPrimary,
+                                    maxLines = 1,
+                                    softWrap = false,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
+                        }
+                    }
+                }
+                HorizontalDivider(thickness = 0.8.dp, color = colors.outline)
             }
         }
 
@@ -255,12 +290,12 @@ private fun LoyaltySupportTab(
                     Column(verticalArrangement = Arrangement.spacedBy(spacing.xxs)) {
                         Text(s.loyaltyPointsTitle, style = type.labelMedium, color = colors.primaryContainer)
                         Text(
-                            text = "${profile?.loyaltyPoints ?: 0L} pts",
+                            text = "${profile?.loyaltyPoints ?: 0L} ${s.pointsUnit}",
                             style = type.displaySmall,
                             color = colors.onPrimary
                         )
                         Surface(
-                            color = colors.primary.copy(alpha = 0.22f),
+                            color = colors.heroAccent.copy(alpha = 0.22f),
                             shape = shapes.pill
                         ) {
                             Text(
@@ -273,7 +308,7 @@ private fun LoyaltySupportTab(
                     }
                     Box(
                         modifier = Modifier
-                            .size(56.dp)
+                            .size(58.dp)
                             .background(colors.warning.copy(alpha = 0.20f), shapes.card),
                         contentAlignment = Alignment.Center
                     ) {
@@ -289,6 +324,9 @@ private fun LoyaltySupportTab(
         }
 
         if (loyaltyLogs.isNotEmpty()) {
+            item(key = "loyalty_activity_header") {
+                SectionHeader(title = s.loyaltyActivityTitle)
+            }
             items(loyaltyLogs.take(5), key = { it.id }) { log ->
                 Surface(
                     color = colors.surface,
@@ -305,7 +343,8 @@ private fun LoyaltySupportTab(
                         Text(
                             text = if (s.isArabic) log.titleAr else log.titleEn,
                             style = type.bodyMedium,
-                            color = colors.textPrimary
+                            color = colors.textPrimary,
+                            modifier = Modifier.weight(1f)
                         )
                         Text(
                             text = if (log.pointsDelta >= 0) "+${log.pointsDelta}" else "${log.pointsDelta}",
@@ -332,44 +371,64 @@ private fun LoyaltySupportTab(
             }
         }
 
-        items(supportTickets, key = { it.id }) { ticket ->
-            Card(
-                shape = shapes.card,
-                border = BorderStroke(1.dp, colors.outline),
-                colors = CardDefaults.cardColors(containerColor = colors.surface)
-            ) {
-                Column(
-                    modifier = Modifier.padding(spacing.md),
-                    verticalArrangement = Arrangement.spacedBy(spacing.xs)
+        if (supportTickets.isEmpty()) {
+            item(key = "tickets_empty") {
+                Surface(
+                    color = colors.surface,
+                    shape = shapes.card,
+                    border = BorderStroke(1.dp, colors.outline),
+                    modifier = Modifier.fillMaxWidth()
                 ) {
                     Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
+                        modifier = Modifier.padding(spacing.md),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(spacing.sm)
                     ) {
-                        Text(ticket.subject, style = type.titleSmall, color = colors.textPrimary)
-                        Surface(color = colors.primaryContainer, shape = shapes.pill) {
-                            Text(
-                                text = ticket.status,
-                                style = type.labelSmall,
-                                color = colors.onPrimaryContainer,
-                                modifier = Modifier.padding(horizontal = spacing.xs, vertical = 3.dp)
-                            )
-                        }
+                        Icon(CleanSupplyIcons.Support, contentDescription = null, tint = colors.primary)
+                        Text(s.emptyTicketsDesc, style = type.bodySmall, color = colors.textSecondary)
                     }
-                    Text(ticket.message, style = type.bodySmall, color = colors.textSecondary)
-                    if (ticket.adminReply.isNotBlank()) {
-                        Surface(
-                            color = colors.successContainer,
-                            shape = shapes.smallComponent,
-                            modifier = Modifier.fillMaxWidth()
+                }
+            }
+        } else {
+            items(supportTickets, key = { it.id }) { ticket ->
+                Card(
+                    shape = shapes.card,
+                    border = BorderStroke(1.dp, colors.outline),
+                    colors = CardDefaults.cardColors(containerColor = colors.surface)
+                ) {
+                    Column(
+                        modifier = Modifier.padding(spacing.md),
+                        verticalArrangement = Arrangement.spacedBy(spacing.xs)
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Text(
-                                text = ticket.adminReply,
-                                style = type.bodySmall,
-                                color = colors.success,
-                                modifier = Modifier.padding(spacing.sm)
-                            )
+                            Text(ticket.subject, style = type.titleSmall, color = colors.textPrimary)
+                            Surface(color = colors.primaryContainer, shape = shapes.pill) {
+                                Text(
+                                    text = ticket.status,
+                                    style = type.labelSmall,
+                                    color = colors.onPrimaryContainer,
+                                    modifier = Modifier.padding(horizontal = spacing.xs, vertical = 3.dp)
+                                )
+                            }
+                        }
+                        Text(ticket.message, style = type.bodySmall, color = colors.textSecondary)
+                        if (ticket.adminReply.isNotBlank()) {
+                            Surface(
+                                color = colors.successContainer,
+                                shape = shapes.smallComponent,
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Text(
+                                    text = ticket.adminReply,
+                                    style = type.bodySmall,
+                                    color = colors.success,
+                                    modifier = Modifier.padding(spacing.sm)
+                                )
+                            }
                         }
                     }
                 }
@@ -398,7 +457,7 @@ private fun LoyaltySupportTab(
                             FilterChip(selected = cat == c, onClick = { cat = c }, label = { Text(c.name, style = type.labelSmall) })
                         }
                     }
-                    OutlinedTextField(value = orderRef, onValueChange = { orderRef = it }, label = { Text("Order #") }, singleLine = true, shape = shapes.input)
+                    OutlinedTextField(value = orderRef, onValueChange = { orderRef = it }, label = { Text(s.orderNumberInputLabel) }, singleLine = true, shape = shapes.input)
                     OutlinedTextField(value = subject, onValueChange = { subject = it }, label = { Text(if (s.isArabic) "العنوان" else "Subject") }, singleLine = true, shape = shapes.input)
                     OutlinedTextField(value = message, onValueChange = { message = it }, label = { Text(if (s.isArabic) "التفاصيل" else "Details") }, shape = shapes.input)
                 }
@@ -460,7 +519,7 @@ private fun ProfileSettingsTab(
         contentPadding = PaddingValues(spacing.md),
         verticalArrangement = Arrangement.spacedBy(spacing.sm)
     ) {
-        // Identity & Credit Card
+        // Identity & B2B Credit Utilization Card
         item(key = "profile_header") {
             Card(
                 shape = shapes.largeSurface,
@@ -498,17 +557,41 @@ private fun ProfileSettingsTab(
                     }
 
                     if ((profile?.creditLimit ?: 0.0) > 0.0) {
+                        val limit = profile?.creditLimit ?: 1.0
+                        val avail = (profile?.availableCredit ?: 0.0).coerceIn(0.0, limit)
+                        val ratio = (avail / limit).toFloat().coerceIn(0f, 1f)
                         Surface(
-                            color = colors.primaryContainer.copy(alpha = 0.65f),
-                            shape = shapes.button,
+                            color = colors.primaryContainer.copy(alpha = 0.50f),
+                            shape = shapes.card,
+                            border = BorderStroke(1.dp, colors.primary.copy(alpha = 0.22f)),
                             modifier = Modifier.fillMaxWidth()
                         ) {
-                            Text(
-                                text = "${if (s.isArabic) "الحد الائتماني المتاح" else "Available B2B Credit"}: ${Formatters.money(profile?.availableCredit ?: 0.0, s.currency)}",
-                                style = type.numericSmall,
-                                color = colors.onPrimaryContainer,
-                                modifier = Modifier.padding(spacing.sm)
-                            )
+                            Column(
+                                modifier = Modifier.padding(spacing.sm),
+                                verticalArrangement = Arrangement.spacedBy(spacing.xs)
+                            ) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Text(s.creditUtilizationLabel, style = type.labelMedium, color = colors.onPrimaryContainer)
+                                    Text(
+                                        text = "${Formatters.money(avail, s.currency)} / ${Formatters.money(limit, s.currency)}",
+                                        style = type.numericSmall,
+                                        color = colors.primary
+                                    )
+                                }
+                                LinearProgressIndicator(
+                                    progress = { ratio },
+                                    color = colors.primary,
+                                    trackColor = colors.surface,
+                                    strokeCap = StrokeCap.Round,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(6.dp)
+                                        .clip(shapes.pill)
+                                )
+                            }
                         }
                     }
                 }
